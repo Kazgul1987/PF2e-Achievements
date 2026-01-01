@@ -21,10 +21,11 @@
 	  }
 	],
     "url": "https://github.com/Handyfon/Farchievements/tree/master",
-    "manifest": "https://raw.githubusercontent.com/Handyfon/Farchievements/master/module.json",
-    "download": "https://raw.githubusercontent.com/Handyfon/Farchievements/master/farchievements.zip",
+    "manifest": "https://raw.githubusercontent.com/Kazgul1987/PF2e-Achievements/master/module.json",
+    "download": "https://raw.githubusercontent.com/Kazgul1987/PF2e-Achievements/master/module.zip",
 	"compatibility": {
 		"minimum": "11",
 		"verified": "13"
 	}
+
 }
