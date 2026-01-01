@@ -1,3 +1,6 @@
+const moduleId = "PF2e-Achievements";
+const modulePath = `modules/${moduleId}`;
+
 Hooks.once('init', function() {
 	const debouncedReload = debounce(() => window.location.reload(), 100);
 	game.settings.register('farchievements', 'EnableAchievementPopup', {
@@ -190,7 +193,7 @@ Hooks.once('init', function() {
         hint: game.i18n.localize('Farchievements.Settings.standarticon.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/standardIcon.PNG",
+        default: `${modulePath}/standardIcon.PNG`,
 		type: String,
 		filePicker: 'image',
     });	
@@ -199,7 +202,7 @@ Hooks.once('init', function() {
         hint: game.i18n.localize('Farchievements.Settings.standardBackground.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/farchievementslogo.png",
+        default: `${modulePath}/farchievementslogo.png`,
 		type: String,
 		filePicker: 'image',
     });
@@ -208,7 +211,7 @@ Hooks.once('init', function() {
         hint: game.i18n.localize('Farchievements.Settings.bannerBackground.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/achievementbanner.jpg",
+        default: `${modulePath}/achievementbanner.jpg`,
 		type: String,
 		filePicker: 'image',
     });
@@ -229,7 +232,7 @@ Hooks.once('init', function() {
 		hint: game.i18n.localize('Farchievements.Settings.achievementStinger.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/standardStinger_by_JFarenheit.mp3",
+        default: `${modulePath}/standardStinger_by_JFarenheit.mp3`,
 		type: String,
 		filePicker: 'audio',
 	});
@@ -238,7 +241,7 @@ Hooks.once('init', function() {
 		hint: game.i18n.localize('Farchievements.Settings.achievementSound.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/mixkit-tile-game-reveal-960.mp3",
+        default: `${modulePath}/mixkit-tile-game-reveal-960.mp3`,
 		type: String,
 		filePicker: 'audio',
 	});
@@ -289,7 +292,7 @@ Hooks.once('init', function() {
         hint: game.i18n.localize('Farchievements.Settings.mystery.Hint'),
         scope: 'world',
         config: true,
-        default: "modules/farchievements/mystery.jpg",
+        default: `${modulePath}/mystery.jpg`,
 		type: String,
 		filePicker: 'image',
     });
@@ -426,7 +429,7 @@ class AchievementsScreen extends Application {
         templateData.data = super.getData();
         templateData.title = "Farchievements";
 		
-        const templatePath = "modules/farchievements/AchievementsScreen.html";
+        const templatePath = `${modulePath}/AchievementsScreen.html`;
 		if(document.getElementsByClassName("achievementsscreen-window").length > 0){}
         AchievementsScreen.renderMenu(templatePath, templateData);
 
@@ -586,7 +589,7 @@ Hooks.on('renderSceneNavigation', async function() {
 			banner = "background: url("+style+")!important;";
 		
 		let bannerstyle = 'top: -200px; '+banner+' background-position: center!important; display: flex;  background-size: 100% 100% !important;';
-		var el = `<div id="Achievementbar" style="display: none;" class="Achievementbar"><div id="FoundryAchievements" class="FoundryAchievementsBanner" style="`+bannerstyle+`"><img id="AchievementIMG" class="AchievementIMG" src="modules/farchievements/standardIcon.PNG"></img><p class="AchievementText"><label class="AchievementTextLabel">${game.i18n.localize('Farchievements.NewAchievement')}</label> (${game.i18n.localize('Farchievements.Achievement')}) </p><i class="Shiny"></i></div></div>`;
+		var el = `<div id="Achievementbar" style="display: none;" class="Achievementbar"><div id="FoundryAchievements" class="FoundryAchievementsBanner" style="`+bannerstyle+`"><img id="AchievementIMG" class="AchievementIMG" src="${modulePath}/standardIcon.PNG"></img><p class="AchievementText"><label class="AchievementTextLabel">${game.i18n.localize('Farchievements.NewAchievement')}</label> (${game.i18n.localize('Farchievements.Achievement')}) </p><i class="Shiny"></i></div></div>`;
 		document.getElementById("notifications").innerHTML = el;
 });
 

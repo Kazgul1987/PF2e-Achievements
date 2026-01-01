@@ -588,7 +588,7 @@ div#FoundryAchievements {
     min-width: 700px;
 }
 .FoundryAchievementsBanner {
-    background: url(modules/farchievements/farchievementsbannerGold.png) !important;
+    background: url(modules/PF2e-Achievements/farchievementsbannerGold.png) !important;
     background-position: center !important;
     box-shadow: 0px 3px 6px black;
 }
