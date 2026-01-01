@@ -175,6 +175,10 @@
     "Farchievements.NewAchievement": "New Achievement:",
     "Farchievements.AchievementsSynced": "Achievements synced",
     "Farchievements.GainedAchivement": "gained the",
+    "Farchievements.Dialog.UnlockForAll": "Unlock for everyone",
+    "Farchievements.Dialog.UnlockForAllTitle": "Unlock for all players?",
+    "Farchievements.Dialog.UnlockForAllContent": "This will unlock \"{achievement}\" for all players. Continue?",
+    "Farchievements.Notification.UnlockForAll": "Achievement unlocked for all players.",
 
     "Farchievements.Html.SeeEverything": "See Everything",
     "Farchievements.Html.Scoreboard": "Scoreboard",
