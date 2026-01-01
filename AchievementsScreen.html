@@ -481,51 +481,62 @@
 			let currentpage = game.settings.get('farchievements', 'currentPage');
 			let prevloaded = (currentpage-1) * load_amount;
 			let toload = load_amount*currentpage;
-			let loadAm = load_amount;
 			if(currentpage <= 1)
 			{
 				prevloaded = 0;
 			}
 			if(prevloaded + load_amount > AchievementList.length){
 				toload = prevloaded + load_amount - ((prevloaded + load_amount) - AchievementList.length);
-				loadAm = load_amount - ((prevloaded + load_amount) - AchievementList.length);
 			}
-			
-			for (let i = prevloaded; i != toload; i++) { //length-1 because array //RENDER ACHIEVMENTS
+
+			const achievementsToRender = AchievementList.slice(prevloaded, toload);
+			const accordionStateKey = `farchievements-accordion-state-${playerIDToLoadFrom || game.user.id || 'gm'}`;
+			const storedOpenPanels = new Set(JSON.parse(sessionStorage.getItem(accordionStateKey) || "[]"));
+			const groupedAchievements = new Map();
+			const getGroupLabel = (value, fallback) => {
+				if (typeof value === "string" && value.trim().length > 0) {
+					return value.trim();
+				}
+				return fallback;
+			};
+			const buildGroupKey = (...parts) => encodeURIComponent(parts.join("||"));
+
+			achievementsToRender.forEach((achievement, index) => { //RENDER ACHIEVMENTS
+				const achievementIndex = prevloaded + index;
 				greyscale = "filter: blur(0px);";//RESET THE GRAYSCALE
 				displayOptions = "" // RESET THE DISPLAYOPTIONS
-				name = AchievementList[i].name;
+				name = achievement.name;
 				originname = name;
 				color = 'white';
 				let glowstyle = '';
 				let glowStyleContainer = '';
 				
 				let known = "";
-				if(AchievementList[i].color)
-					color = AchievementList[i].color;
+				if(achievement.color)
+					color = achievement.color;
 
 				colorOptions = "color:"+color+";background:"+color+";";
-				if(AchievementList[i].glowing){
-					glowstyle = "animation: customRim"+i+" 1.5s ease-in-out infinite alternate;"
-					glowStyleContainer = "<style>@keyframes customRim"+i+" { from { box-shadow: 0 0 1px "+ color + ", 0 0 2px " + color + ", 0 0 3px " + color + ", 0 0 4px " + color + "," + "0 0 7px " + color + ", 0 0 8px " + color + ", 0 0 10px " + color + ", 0 0 50px " + color + "; } to { box-shadow: 0 0 5px " + color + ", 0 0 1px " + color + ", 0 0 1px " + color + ", 0 0 2px " + color + ", 0 0 3px " + color + ", 0 0 4px " + color + ", 0 0 5px " + color + ", 0 0 7px " + color + ";}}</style>";
+				if(achievement.glowing){
+					glowstyle = "animation: customRim"+achievementIndex+" 1.5s ease-in-out infinite alternate;"
+					glowStyleContainer = "<style>@keyframes customRim"+achievementIndex+" { from { box-shadow: 0 0 1px "+ color + ", 0 0 2px " + color + ", 0 0 3px " + color + ", 0 0 4px " + color + "," + "0 0 7px " + color + ", 0 0 8px " + color + ", 0 0 10px " + color + ", 0 0 50px " + color + "; } to { box-shadow: 0 0 5px " + color + ", 0 0 1px " + color + ", 0 0 1px " + color + ", 0 0 2px " + color + ", 0 0 3px " + color + ", 0 0 4px " + color + ", 0 0 5px " + color + ", 0 0 7px " + color + ";}}</style>";
 				}
 				else{
 					glowstyle = '';
 				}
-				if (AchievementList[i].image != undefined) { icon = AchievementList[i].image } else { icon = game.settings.get('farchievements', 'standarticon') } //IF STANDARD ICON USE ICON DEFINED IN GAMESETTINGS
-				description = AchievementList[i].description;
+				if (achievement.image != undefined) { icon = achievement.image } else { icon = game.settings.get('farchievements', 'standarticon') } //IF STANDARD ICON USE ICON DEFINED IN GAMESETTINGS
+				description = achievement.description;
 				if (!game.user.isGM || playerIDToLoadFrom != "") { // IF LOAD FOR PLAYER
-					if ((Array.isArray(AchievementList[i].players) && AchievementList[i].players.includes(game.user.id)) ||
-						(Array.isArray(AchievementList[i].players) && AchievementList[i].players.includes(playerIDToLoadFrom))) {
+					if ((Array.isArray(achievement.players) && achievement.players.includes(game.user.id)) ||
+						(Array.isArray(achievement.players) && achievement.players.includes(playerIDToLoadFrom))) {
 						
 						known = "knownAch"; // Mark as known
 
 					} else {
 						// User does not have access to the achievement
-						if (AchievementList[i].secret) {
+						if (achievement.secret) {
 							// If it's a secret achievement, only show if owned
-							if (!AchievementList[i].players.includes(game.user.id) && 
-								(!playerIDToLoadFrom || !AchievementList[i].players.includes(playerIDToLoadFrom))) {
+							if (!achievement.players.includes(game.user.id) && 
+								(!playerIDToLoadFrom || !achievement.players.includes(playerIDToLoadFrom))) {
 								
 								if (game.settings.get('farchievements', 'OmniView') && game.user.isGM) {
 									// In OmniView, still display it but greyscaled
@@ -574,28 +585,28 @@
 				let progressBarHTML = "";
 
 				if (!(game.user.isGM && playerIDToLoadFrom == "")) {
-				if (AchievementList[i].progressType && AchievementList[i].progressType !== "standard" && AchievementList[i].progressType !== "dice") {
-					let progressRequired = AchievementList[i].progressRequired != null ? AchievementList[i].progressRequired : 10;
+				if (achievement.progressType && achievement.progressType !== "standard" && achievement.progressType !== "dice") {
+					let progressRequired = achievement.progressRequired != null ? achievement.progressRequired : 10;
 
 					// Use the playerIDToLoadFrom if it's set, otherwise fallback to the current user
 					let playerID = playerIDToLoadFrom != "" ? playerIDToLoadFrom : game.user.id;
 
-					let playerProgress = (AchievementList[i].playerProgress && AchievementList[i].playerProgress[playerID] != null)
-						? AchievementList[i].playerProgress[playerID]
+					let playerProgress = (achievement.playerProgress && achievement.playerProgress[playerID] != null)
+						? achievement.playerProgress[playerID]
 						: 0;
 
 					let progressPercentage;
 					
-					if (AchievementList[i].progressType === "diceChain") {
+					if (achievement.progressType === "diceChain") {
 						// For diceChain, use the player's chain progress as the current progress
-						let chainProgress = AchievementList[i].playerProgress?.[playerID] || 0; // Use optional chaining to handle null or undefined playerProgress
-						let chainLength = AchievementList[i].chainLength ?? 2; // Use nullish coalescing to handle undefined or null chainLength
+						let chainProgress = achievement.playerProgress?.[playerID] || 0; // Use optional chaining to handle null or undefined playerProgress
+						let chainLength = achievement.chainLength ?? 2; // Use nullish coalescing to handle undefined or null chainLength
 
 						progressPercentage = Math.min((chainProgress / chainLength) * 100, 100);
 					} else {
 						// For other types, calculate progress normally
-						let progressRequired = AchievementList[i].progressRequired ?? 0; // Use nullish coalescing to handle undefined or null progressRequired
-						let playerProgress = AchievementList[i].playerProgress?.[playerID] || 0; // Use optional chaining to handle null or undefined playerProgress
+						let progressRequired = achievement.progressRequired ?? 0; // Use nullish coalescing to handle undefined or null progressRequired
+						let playerProgress = achievement.playerProgress?.[playerID] || 0; // Use optional chaining to handle null or undefined playerProgress
 
 						progressPercentage = progressRequired > 0 ? Math.min((playerProgress / progressRequired) * 100, 100) : 0; // Avoid division by zero
 					}
@@ -606,26 +617,104 @@
 										</div>`;
 
 					// Add + and - buttons for GM to manually adjust progress for "count" type
-					if (game.user.isGM && AchievementList[i].progressType === "count") {
+					if (game.user.isGM && achievement.progressType === "count") {
 						let gmControlHTML = `<div class="gmAchProgressControl">
-												<button class="achProgressControlButton" style="background:green;" onclick="updatePlayerProgress('${AchievementList[i].name}', '${playerID}', -1)">-</button>
-												<button class="achProgressControlButton" style="background:red;" onclick="updatePlayerProgress('${AchievementList[i].name}', '${playerID}', 1)">+</button>
+												<button class="achProgressControlButton" style="background:green;" onclick="updatePlayerProgress('${achievement.name}', '${playerID}', -1)">-</button>
+												<button class="achProgressControlButton" style="background:red;" onclick="updatePlayerProgress('${achievement.name}', '${playerID}', 1)">+</button>
 											</div>`;
 						progressBarHTML += gmControlHTML;
 					}
 				}
 			}
 
-				if (playerIDToLoadFrom != "" && AchievementList[i].progressType!="count") onClickFunction = 'oncontextmenu="setAchievement(`' + originname + '`,' + '\'' + playerIDToLoadFrom + '\')"';
-				document.getElementById('AchievementList').innerHTML += `
-				<div ${onClickFunction} id="Achievement-${i}" class="far-grid-item ${listView} ${known}" style="${greyscale} ${displayOptions} ${colorOptions} background:${color}; ${glowstyle}">
+				if (playerIDToLoadFrom != "" && achievement.progressType!="count") onClickFunction = 'oncontextmenu="setAchievement(`' + originname + '`,' + '\'' + playerIDToLoadFrom + '\')"';
+				const achievementCardHTML = `
+				<div ${onClickFunction} id="Achievement-${achievementIndex}" class="far-grid-item ${listView} ${known}" style="${greyscale} ${displayOptions} ${colorOptions} background:${color}; ${glowstyle}">
 					${AchName}
 					<img class="AchIcon" src="${icon}"></img>
 					<p class="AchDescription" style="color:${color}; background:${getColorChange(color)};">${description}</p>
 					${progressBarHTML} <!-- Insert the progress bar here -->
 					${glowStyleContainer}
-				</div>`;			}
-			document.getElementById("AchievementList").style = "grid-template-rows: repeat(" + Math.round(loadAm / 6) + ", 1fr);"
+				</div>`;
+
+				const campaignName = getGroupLabel(achievement.campaign, "Campaign");
+				const adventureName = getGroupLabel(achievement.adventure, "Adventure");
+				const chapterName = getGroupLabel(achievement.chapter, "Chapter");
+
+				if (!groupedAchievements.has(campaignName)) {
+					groupedAchievements.set(campaignName, new Map());
+				}
+				const adventureMap = groupedAchievements.get(campaignName);
+				if (!adventureMap.has(adventureName)) {
+					adventureMap.set(adventureName, new Map());
+				}
+				const chapterMap = adventureMap.get(adventureName);
+				if (!chapterMap.has(chapterName)) {
+					chapterMap.set(chapterName, []);
+				}
+				chapterMap.get(chapterName).push(achievementCardHTML);
+			});
+
+			let groupedHTML = "";
+			groupedAchievements.forEach((adventureMap, campaignName) => {
+				let campaignCount = 0;
+				adventureMap.forEach((chapterMap) => {
+					chapterMap.forEach((achievements) => {
+						campaignCount += achievements.length;
+					});
+				});
+				const campaignKey = buildGroupKey("campaign", campaignName);
+				const campaignOpen = storedOpenPanels.has(campaignKey) ? "open" : "";
+				groupedHTML += `
+					<details class="achievement-level achievement-level-campaign" data-group-key="${campaignKey}" ${campaignOpen}>
+						<summary>${campaignName} <span class="achievement-count">(${campaignCount})</span></summary>
+				`;
+
+				adventureMap.forEach((chapterMap, adventureName) => {
+					let adventureCount = 0;
+					chapterMap.forEach((achievements) => {
+						adventureCount += achievements.length;
+					});
+					const adventureKey = buildGroupKey("campaign", campaignName, "adventure", adventureName);
+					const adventureOpen = storedOpenPanels.has(adventureKey) ? "open" : "";
+					groupedHTML += `
+						<details class="achievement-level achievement-level-adventure" data-group-key="${adventureKey}" ${adventureOpen}>
+							<summary>${adventureName} <span class="achievement-count">(${adventureCount})</span></summary>
+					`;
+
+					chapterMap.forEach((achievements, chapterName) => {
+						const chapterKey = buildGroupKey("campaign", campaignName, "adventure", adventureName, "chapter", chapterName);
+						const chapterOpen = storedOpenPanels.has(chapterKey) ? "open" : "";
+						groupedHTML += `
+							<details class="achievement-level achievement-level-chapter" data-group-key="${chapterKey}" ${chapterOpen}>
+								<summary>${chapterName} <span class="achievement-count">(${achievements.length})</span></summary>
+								<div class="achievement-chapter-grid">
+									${achievements.join("")}
+								</div>
+							</details>
+						`;
+					});
+
+					groupedHTML += `
+						</details>
+					`;
+				});
+
+				groupedHTML += `
+					</details>
+				`;
+			});
+
+			const achievementListElement = document.getElementById('AchievementList');
+			achievementListElement.classList.add('achievement-accordion');
+			achievementListElement.innerHTML = groupedHTML;
+			achievementListElement.querySelectorAll('details').forEach((detail) => {
+				detail.addEventListener('toggle', () => {
+					const openKeys = Array.from(achievementListElement.querySelectorAll('details[open]'))
+						.map((openDetail) => openDetail.dataset.groupKey);
+					sessionStorage.setItem(accordionStateKey, JSON.stringify(openKeys));
+				});
+			});
 
 			// NEW CODE FOR THE TILT EFFECT
 			const achievementCards = document.querySelectorAll('.far-grid-item');
