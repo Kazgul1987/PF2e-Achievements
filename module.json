@@ -22,13 +22,14 @@
 	],
     "url": "https://github.com/Handyfon/Farchievements/tree/master",
     "manifest": "https://raw.githubusercontent.com/Kazgul1987/PF2e-Achievements/master/module.json",
-    "download": "https://github.com/Kazgul1987/PF2e-Achievements/releases/latest/download/farchievements.zip",
+    "download": "https://github.com/Kazgul1987/PF2e-Achievements/releases/latest/download/PF2e-Achievements.zip",
 	"compatibility": {
 		"minimum": "11",
 		"verified": "13"
 	}
 
 }
+
 
 
 
