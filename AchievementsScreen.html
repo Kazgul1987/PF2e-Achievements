@@ -226,6 +226,12 @@
 				return [];
 			}
 
+			let normalizedResult = normalizeAchievementData(AchievementData);
+			AchievementData = normalizedResult.data;
+			if (normalizedResult.updated) {
+				await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			}
+
 			let searchValue = game.settings.get('farchievements', 'lastSearchTerm')?.toLowerCase().trim() || "";
 			let sortType = game.settings.get('farchievements', 'lastSortType') || "nameAsc";
 
@@ -298,6 +304,34 @@
 			}
 
 			return AchievementData;
+		}
+
+		function normalizeAchievementData(achievementData) {
+			let updated = false;
+			let normalizedData = achievementData.map((achievement) => {
+				if (!achievement || typeof achievement !== "object") {
+					return achievement;
+				}
+
+				let normalizedAchievement = { ...achievement };
+
+				if (normalizedAchievement.campaign == null) {
+					normalizedAchievement.campaign = "";
+					updated = true;
+				}
+				if (normalizedAchievement.adventure == null) {
+					normalizedAchievement.adventure = "";
+					updated = true;
+				}
+				if (normalizedAchievement.chapter == null) {
+					normalizedAchievement.chapter = "";
+					updated = true;
+				}
+
+				return normalizedAchievement;
+			});
+
+			return { data: normalizedData, updated };
 		}
 		async function updateSearchTerm() {
 			let searchValue = document.getElementById('viewModeSearchBar').value.trim();
@@ -777,6 +811,11 @@
 				return;
 			}
 			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let normalizedResult = normalizeAchievementData(AchievementData);
+			AchievementData = normalizedResult.data;
+			if (normalizedResult.updated) {
+				await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			}
 			loadPageNav(AchievementData);
 
 			document.getElementById('CustomAchievmentBackgroundStyling').innerHTML = "";
@@ -790,6 +829,9 @@
 			let description = "";
 			let labels = '';
 			let points = 1;
+			let campaign = "";
+			let adventure = "";
+			let chapter = "";
 			let progressRequired = 0;
 			let progressType = "standard"; // default value
 			let diceType = "d6"; // default dice type
@@ -824,6 +866,9 @@
 			for (let i = prevloaded; i != toload; i++) { // RENDER ACHIEVEMENTS
 				labels = "";//RESET LABELS FOR EVERY ACHIEVEMENT
 				points = 1;
+				campaign = "";
+				adventure = "";
+				chapter = "";
 				glowing = '';
 				color = '#f7ff9e';
 				progressRequired = 0;
@@ -839,6 +884,15 @@
 
 				if (AchievementList[i].points != null)
 					points = AchievementList[i].points;
+
+				if (AchievementList[i].campaign != null)
+					campaign = AchievementList[i].campaign;
+
+				if (AchievementList[i].adventure != null)
+					adventure = AchievementList[i].adventure;
+
+				if (AchievementList[i].chapter != null)
+					chapter = AchievementList[i].chapter;
 
 				if (AchievementList[i].progressRequired != null)
 					progressRequired = AchievementList[i].progressRequired;
@@ -948,6 +1002,14 @@
 						</div>
 						<div class="achEditInpDesc">
 							<textarea input class="AchInputDes" type="text" id="achievementdes${name}" cols="40" rows="5" onchange="updateAchievement(3, '${name}')">${description}</textarea>
+						</div>
+						<div class="achEditMetadata">
+							<label>Campaign:</label>
+							<input class="AchInputMeta" type="text" id="achievementCampaign${name}" onchange="updateAchievement(12, '${name}')" value="${campaign}">
+							<label>Adventure:</label>
+							<input class="AchInputMeta" type="text" id="achievementAdventure${name}" onchange="updateAchievement(13, '${name}')" value="${adventure}">
+							<label>Chapter:</label>
+							<input class="AchInputMeta" type="text" id="achievementChapter${name}" onchange="updateAchievement(14, '${name}')" value="${chapter}">
 						</div>
 						<div class="achEditPoints">
 							<label>${langScore}:</label>
@@ -1109,17 +1171,20 @@
 		async function addAchievement() {
 			if(!game.user.isGM)return;
 				class Achievement{
-				constructor(name, description, image, players){
+				constructor(name, description, image, players, campaign = "", adventure = "", chapter = ""){
 					this.name = name;
 					this.description = description;
 					this.image = image;
 					this.players = players;
+					this.campaign = campaign;
+					this.adventure = adventure;
+					this.chapter = chapter;
 				}
 			}
 			console.log("SettingACH");
 			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
 			let len = +AchievementData.length+1;
-			let newAch = new Achievement("Achievement "+len, "", game.settings.get('farchievements', 'standarticon'), []);
+			let newAch = new Achievement("Achievement "+len, "", game.settings.get('farchievements', 'standarticon'), [], "", "", "");
 			AchievementData.push(newAch);
 			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
 			loadAchievementsEditMode();
@@ -1174,6 +1239,8 @@
 						callback: () => {
 							let inputElement = document.getElementById("ImportExportInput");
 							let AchievementList = JSON.parse(inputElement.value);
+							let normalizedResult = normalizeAchievementData(AchievementList);
+							AchievementList = normalizedResult.data;
 							document.body.appendChild(inputElement);
 							inputElement.select();
 							document.execCommand('paste');
@@ -1190,7 +1257,8 @@
 								return;
 							}
 
-							game.settings.set('farchievements', 'achievementdataNEW', inputElement.value);
+							let normalizedValue = JSON.stringify(AchievementList);
+							game.settings.set('farchievements', 'achievementdataNEW', normalizedValue);
 							ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.Overwritten'));
 							let $dialog = $('.achievementsscreen-window');
 							$dialog.remove();
@@ -1201,7 +1269,9 @@
 						icon: '<i class="fas fa-copy" style="color:green;"></i>',
 						callback: () => {
 							let inputElement = document.getElementById("ImportExportInput");
-							inputElement.value = game.settings.get('farchievements', 'achievementdataNEW');
+							let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+							let normalizedResult = normalizeAchievementData(AchievementList);
+							inputElement.value = JSON.stringify(normalizedResult.data);
 							document.body.appendChild(inputElement);
 							inputElement.select();
 							document.execCommand('copy');
@@ -1271,6 +1341,21 @@
 			}
 			if (updateType === 11) { // SECRET TOGGLE
 				AchievementData.filter(x => x.name == achievementname)[0].secret = document.getElementById('achievementSecret' + achievementname).checked;
+			}
+
+			if (updateType === 12) { // CAMPAIGN
+				let newCampaign = sanitizeInput(document.getElementById('achievementCampaign' + achievementname).value);
+				AchievementData.filter(x => x.name == achievementname)[0].campaign = newCampaign;
+			}
+
+			if (updateType === 13) { // ADVENTURE
+				let newAdventure = sanitizeInput(document.getElementById('achievementAdventure' + achievementname).value);
+				AchievementData.filter(x => x.name == achievementname)[0].adventure = newAdventure;
+			}
+
+			if (updateType === 14) { // CHAPTER
+				let newChapter = sanitizeInput(document.getElementById('achievementChapter' + achievementname).value);
+				AchievementData.filter(x => x.name == achievementname)[0].chapter = newChapter;
 			}
 			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
 
