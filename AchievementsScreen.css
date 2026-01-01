@@ -29,6 +29,67 @@ i.fas.fa-list.listViewSettings:active {
     background: white;
     color: black;
 }
+.achievement-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.achievement-accordion details {
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 6px;
+}
+.achievement-accordion summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    color: #f7ff9e;
+    padding: 6px 8px;
+    border-radius: 4px;
+    list-style: none;
+}
+.achievement-accordion summary::-webkit-details-marker {
+    display: none;
+}
+.achievement-accordion summary:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.achievement-accordion summary::before {
+    content: "▸";
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+.achievement-accordion details[open] > summary::before {
+    transform: rotate(90deg);
+}
+.achievement-count {
+    color: #cfcfcf;
+    font-weight: normal;
+}
+.achievement-level-campaign {
+    margin-top: 6px;
+}
+.achievement-level-adventure {
+    margin-left: 16px;
+    margin-top: 6px;
+    background: rgba(0, 0, 0, 0.25);
+}
+.achievement-level-chapter {
+    margin-left: 32px;
+    margin-top: 6px;
+    background: rgba(0, 0, 0, 0.2);
+}
+.achievement-chapter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    gap: 22px 5px;
+    place-items: center;
+    margin-top: 10px;
+    padding-bottom: 6px;
+}
 .far-grid-item::before {
     content: "";
     position: absolute;
