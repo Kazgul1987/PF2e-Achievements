@@ -107,6 +107,14 @@ Hooks.once('init', function() {
 		default: 1,
 		type: Number,
     });
+	game.settings.register('farchievements', 'collapsedGroups', {
+        name: 'Collapsed achievement groups',
+        hint: 'Stores collapsed achievement group ids',
+        scope: 'client',
+        config: false,
+		default: [],
+		type: Array,
+    });
 	game.settings.register('farchievements', 'GameSettingsButton', {
         name: game.i18n.localize('Farchievements.Settings.GameSettingsButton.Text'),
         hint: game.i18n.localize('Farchievements.Settings.GameSettingsButton.Hint'),

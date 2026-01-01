@@ -96,10 +96,35 @@ i.fas.fa-list.listViewSettings:active {
 .achievement-group {
     margin-top: 12px;
 }
+.achievement-group.is-collapsed .achievement-chapter-grid {
+    display: none;
+}
 .achievement-group-title {
     margin: 6px 0;
     font-size: 18px;
     color: #f0f0f0;
+}
+.achievement-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+}
+.achievement-group-toggle::before {
+    content: "▾";
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+.achievement-group.is-collapsed > .achievement-group-title .achievement-group-toggle::before {
+    transform: rotate(-90deg);
+}
+.achievement-group-toggle:hover {
+    color: #ffffff;
 }
 .achievement-group-adventure {
     margin-left: 16px;
