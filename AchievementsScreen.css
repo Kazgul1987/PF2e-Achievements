@@ -90,6 +90,63 @@ i.fas.fa-list.listViewSettings:active {
     margin-top: 10px;
     padding-bottom: 6px;
 }
+.achievement-tab-view {
+    display: block;
+}
+.achievement-group {
+    margin-top: 12px;
+}
+.achievement-group-title {
+    margin: 6px 0;
+    font-size: 18px;
+    color: #f0f0f0;
+}
+.achievement-group-adventure {
+    margin-left: 16px;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+}
+.achievement-group-chapter {
+    margin-left: 16px;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+.ach-tab-bar {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 12px;
+    padding: 6px 10px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 6px;
+}
+.ach-tab {
+    background: #2c2c2c;
+    border: 1px solid #3f3f3f;
+    color: #cfcfcf;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.ach-tab:hover {
+    background: #3a3a3a;
+    color: #ffffff;
+    border-color: #5a5a5a;
+}
+.ach-tab.active {
+    background: #4a4a4a;
+    color: #ffffff;
+    border-color: #7a7a7a;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
 .far-grid-item::before {
     content: "";
     position: absolute;

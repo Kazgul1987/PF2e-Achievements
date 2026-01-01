@@ -355,6 +355,12 @@
 			// Retrieve the stored search term and sorting type
 			let searchValue = game.settings.get('farchievements', 'lastSearchTerm') || "";
 			let sortValue = game.settings.get('farchievements', 'lastSortType') || "nameAsc";
+			const validTabs = ["campaign", "adventure", "chapter"];
+			let activeTab = game.settings.get('farchievements', 'activeTab') || "campaign";
+			if (!validTabs.includes(activeTab)) {
+				activeTab = "campaign";
+				game.settings.set('farchievements', 'activeTab', activeTab);
+			}
 
 			
 			let AchievementList;
@@ -371,6 +377,34 @@
 			document.getElementById('CustomAchievmentBackgroundStyling').innerHTML = '<style>.achievementsscreen-window .window-content{background: #232323;}</style>';
 			loadPlayerNav(false);
 			
+			const setActiveTabUI = (tabValue) => {
+				document.querySelectorAll('.ach-tab').forEach((tab) => {
+					tab.classList.toggle('active', tab.dataset.tab === tabValue);
+				});
+			};
+
+			if (!document.getElementById("achievementsTabBar")) {
+				let tabBar = document.createElement('div');
+				tabBar.id = "achievementsTabBar";
+				tabBar.className = "ach-tab-bar";
+				tabBar.innerHTML = `
+					<button id="campaignTab" class="ach-tab" data-tab="campaign">Campaign</button>
+					<button id="adventureTab" class="ach-tab" data-tab="adventure">Adventure</button>
+					<button id="chapterTab" class="ach-tab" data-tab="chapter">Chapter</button>
+				`;
+				document.getElementById('AchPlayerNav').after(tabBar);
+				tabBar.querySelectorAll('.ach-tab').forEach((tab) => {
+					tab.addEventListener('click', async () => {
+						const tabValue = tab.dataset.tab;
+						if (tabValue && tabValue !== game.settings.get('farchievements', 'activeTab')) {
+							await game.settings.set('farchievements', 'activeTab', tabValue);
+						}
+						setActiveTabUI(tabValue);
+						reloadAchievements();
+					});
+				});
+			}
+
 			if (!document.getElementById("achievementsToolbar")) {
 				let toolbar = document.createElement('div');
 				toolbar.id = "achievementsToolbar";
@@ -392,8 +426,14 @@
 
 				`;
 
-				document.getElementById('AchPlayerNav').after(toolbar);
+				const tabBar = document.getElementById("achievementsTabBar");
+				if (tabBar) {
+					tabBar.after(toolbar);
+				} else {
+					document.getElementById('AchPlayerNav').after(toolbar);
+				}
 			}
+			setActiveTabUI(activeTab);
 
 			//CHANGE WINDOW TITLE AND COLOR
 			if(game.users.size>1){
@@ -490,8 +530,6 @@
 			}
 
 			const achievementsToRender = AchievementList.slice(prevloaded, toload);
-			const accordionStateKey = `farchievements-accordion-state-${playerIDToLoadFrom || game.user.id || 'gm'}`;
-			const storedOpenPanels = new Set(JSON.parse(sessionStorage.getItem(accordionStateKey) || "[]"));
 			const groupedAchievements = new Map();
 			const getGroupLabel = (value, fallback) => {
 				if (typeof value === "string" && value.trim().length > 0) {
@@ -499,7 +537,6 @@
 				}
 				return fallback;
 			};
-			const buildGroupKey = (...parts) => encodeURIComponent(parts.join("||"));
 
 			achievementsToRender.forEach((achievement, index) => { //RENDER ACHIEVMENTS
 				const achievementIndex = prevloaded + index;
@@ -655,66 +692,98 @@
 				chapterMap.get(chapterName).push(achievementCardHTML);
 			});
 
-			let groupedHTML = "";
-			groupedAchievements.forEach((adventureMap, campaignName) => {
-				let campaignCount = 0;
+			const countAchievements = (adventureMap) => {
+				let total = 0;
 				adventureMap.forEach((chapterMap) => {
 					chapterMap.forEach((achievements) => {
-						campaignCount += achievements.length;
+						total += achievements.length;
 					});
 				});
-				const campaignKey = buildGroupKey("campaign", campaignName);
-				const campaignOpen = storedOpenPanels.has(campaignKey) ? "open" : "";
-				groupedHTML += `
-					<details class="achievement-level achievement-level-campaign" data-group-key="${campaignKey}" ${campaignOpen}>
-						<summary>${campaignName} <span class="achievement-count">(${campaignCount})</span></summary>
-				`;
+				return total;
+			};
 
-				adventureMap.forEach((chapterMap, adventureName) => {
-					let adventureCount = 0;
-					chapterMap.forEach((achievements) => {
-						adventureCount += achievements.length;
+			const buildGroupTitle = (label, count, tag, extraClass = "") =>
+				`<${tag} class="achievement-group-title ${extraClass}">${label} <span class="achievement-count">(${count})</span></${tag}>`;
+
+			let groupedHTML = "";
+			if (activeTab === "campaign") {
+				groupedAchievements.forEach((adventureMap, campaignName) => {
+					const campaignAchievements = [];
+					adventureMap.forEach((chapterMap) => {
+						chapterMap.forEach((achievements) => {
+							campaignAchievements.push(...achievements);
+						});
 					});
-					const adventureKey = buildGroupKey("campaign", campaignName, "adventure", adventureName);
-					const adventureOpen = storedOpenPanels.has(adventureKey) ? "open" : "";
 					groupedHTML += `
-						<details class="achievement-level achievement-level-adventure" data-group-key="${adventureKey}" ${adventureOpen}>
-							<summary>${adventureName} <span class="achievement-count">(${adventureCount})</span></summary>
+						<section class="achievement-group achievement-group-campaign">
+							${buildGroupTitle(campaignName, campaignAchievements.length, "h3")}
+							<div class="achievement-chapter-grid">
+								${campaignAchievements.join("")}
+							</div>
+						</section>
 					`;
-
-					chapterMap.forEach((achievements, chapterName) => {
-						const chapterKey = buildGroupKey("campaign", campaignName, "adventure", adventureName, "chapter", chapterName);
-						const chapterOpen = storedOpenPanels.has(chapterKey) ? "open" : "";
-						groupedHTML += `
-							<details class="achievement-level achievement-level-chapter" data-group-key="${chapterKey}" ${chapterOpen}>
-								<summary>${chapterName} <span class="achievement-count">(${achievements.length})</span></summary>
+				});
+			} else if (activeTab === "adventure") {
+				groupedAchievements.forEach((adventureMap, campaignName) => {
+					let adventureGroups = "";
+					adventureMap.forEach((chapterMap, adventureName) => {
+						const adventureAchievements = [];
+						chapterMap.forEach((achievements) => {
+							adventureAchievements.push(...achievements);
+						});
+						adventureGroups += `
+							<div class="achievement-group achievement-group-adventure">
+								${buildGroupTitle(adventureName, adventureAchievements.length, "h4")}
 								<div class="achievement-chapter-grid">
-									${achievements.join("")}
+									${adventureAchievements.join("")}
 								</div>
-							</details>
+							</div>
 						`;
 					});
-
 					groupedHTML += `
-						</details>
+						<section class="achievement-group achievement-group-campaign">
+							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3")}
+							${adventureGroups}
+						</section>
 					`;
 				});
-
-				groupedHTML += `
-					</details>
-				`;
-			});
+			} else {
+				groupedAchievements.forEach((adventureMap, campaignName) => {
+					let adventureGroups = "";
+					adventureMap.forEach((chapterMap, adventureName) => {
+						let chapterGroups = "";
+						let adventureCount = 0;
+						chapterMap.forEach((achievements, chapterName) => {
+							adventureCount += achievements.length;
+							chapterGroups += `
+								<div class="achievement-group achievement-group-chapter">
+									${buildGroupTitle(chapterName, achievements.length, "h5")}
+									<div class="achievement-chapter-grid">
+										${achievements.join("")}
+									</div>
+								</div>
+							`;
+						});
+						adventureGroups += `
+							<div class="achievement-group achievement-group-adventure">
+								${buildGroupTitle(adventureName, adventureCount, "h4")}
+								${chapterGroups}
+							</div>
+						`;
+					});
+					groupedHTML += `
+						<section class="achievement-group achievement-group-campaign">
+							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3")}
+							${adventureGroups}
+						</section>
+					`;
+				});
+			}
 
 			const achievementListElement = document.getElementById('AchievementList');
-			achievementListElement.classList.add('achievement-accordion');
+			achievementListElement.classList.remove('achievement-accordion');
+			achievementListElement.classList.add('achievement-tab-view');
 			achievementListElement.innerHTML = groupedHTML;
-			achievementListElement.querySelectorAll('details').forEach((detail) => {
-				detail.addEventListener('toggle', () => {
-					const openKeys = Array.from(achievementListElement.querySelectorAll('details[open]'))
-						.map((openDetail) => openDetail.dataset.groupKey);
-					sessionStorage.setItem(accordionStateKey, JSON.stringify(openKeys));
-				});
-			});
 
 			// NEW CODE FOR THE TILT EFFECT
 			const achievementCards = document.querySelectorAll('.far-grid-item');
