@@ -350,6 +350,14 @@ Hooks.once('init', function() {
 		default: "nameAsc",
 		type: String,
 	});	
+	game.settings.register('farchievements', 'activeTab', {
+		name: 'Farchievements.Settings.activeTab.Text',
+		hint: 'this will hold the active tab for the achievement view',
+		scope: 'client',
+		config: false,
+		default: "campaign",
+		type: String,
+	});
 
 	console.log("Initialised Farchievements");
 });
