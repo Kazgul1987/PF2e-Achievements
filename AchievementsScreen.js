@@ -618,7 +618,10 @@ Hooks.on('createChatMessage', (chatMessage) => {
                 achievementData.progressType,
                 achievementData.playerProgress,
                 achievementData.chainLength,
-                achievementData.diceType
+                achievementData.diceType,
+				achievementData.campaign,
+				achievementData.adventure,
+				achievementData.chapter
             );
 
             // Check if the dice type matches the achievement's diceType requirement
@@ -931,7 +934,25 @@ window.Farchievements = class Farchievement{
 				}
 			}
 			
-			let newAch = new Achievement(oldDataArr[i].split(":::")[1].split("////")[0], oldDataArr[i].split("////")[2], oldDataArr[i].split("////")[1], playerslist);
+			let newAch = new Achievement(
+				oldDataArr[i].split(":::")[1].split("////")[0],
+				oldDataArr[i].split("////")[2],
+				oldDataArr[i].split("////")[1],
+				1,
+				false,
+				"#f7ff9e",
+				playerslist,
+				[],
+				{},
+				0,
+				"standard",
+				{},
+				2,
+				"d20",
+				"",
+				"",
+				""
+			);
 			if(AchievementList.find(ach => ach.name == newAch.name)){
 				var number = AchievementList.filter(ach => ach.name.includes(newAch.name)).length
 				newAch.name += "("+number+")"
@@ -1309,8 +1330,23 @@ async function SendSyncMessage() {
 
 class Achievement {
     constructor(
-        name, description, image, points = 1, glowing = false, color="#f7ff9e", players, seenBy = [], playerDates = {}, 
-        progressRequired = 0, progressType = "standard", playerProgress = {}, chainLength = 2, diceType = "d20"
+        name,
+		description,
+		image,
+		points = 1,
+		glowing = false,
+		color = "#f7ff9e",
+		players,
+		seenBy = [],
+		playerDates = {},
+        progressRequired = 0,
+		progressType = "standard",
+		playerProgress = {},
+		chainLength = 2,
+		diceType = "d20",
+		campaign = "",
+		adventure = "",
+		chapter = ""
     ) {
         this.name = name;
         this.description = description;
@@ -1326,6 +1362,9 @@ class Achievement {
         this.playerProgress = playerProgress; // Track player progress, used for both standard and chain
 		this.diceType = diceType;
 		this.chainLength = chainLength; //The Amount of times a player needs to roll the value required for a chain
+		this.campaign = campaign;
+		this.adventure = adventure;
+		this.chapter = chapter;
     }
 
     // Method to add progress for a player
