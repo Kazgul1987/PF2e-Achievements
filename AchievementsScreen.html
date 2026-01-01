@@ -912,6 +912,37 @@
 			document.getElementById('AchievementList').innerHTML = "";
 			document.getElementById('CustomAchievmentStyling').innerHTML = "";
 
+			let campaignOptions = new Set();
+			let adventureOptions = new Set();
+			let chapterOptions = new Set();
+			AchievementData.forEach((achievement) => {
+				if (achievement.campaign && achievement.campaign.trim()) {
+					campaignOptions.add(achievement.campaign.trim());
+				}
+				if (achievement.adventure && achievement.adventure.trim()) {
+					adventureOptions.add(achievement.adventure.trim());
+				}
+				if (achievement.chapter && achievement.chapter.trim()) {
+					chapterOptions.add(achievement.chapter.trim());
+				}
+			});
+			const escapeOption = (value) => value.replace(/[&<>"']/g, (char) => ({
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#39;',
+			}[char]));
+			const createOptions = (options) => Array.from(options)
+				.sort((a, b) => a.localeCompare(b))
+				.map((value) => `<option value="${escapeOption(value)}"></option>`)
+				.join('');
+			document.getElementById('AchievementList').innerHTML = `
+				<datalist id="achievementCampaignOptions">${createOptions(campaignOptions)}</datalist>
+				<datalist id="achievementAdventureOptions">${createOptions(adventureOptions)}</datalist>
+				<datalist id="achievementChapterOptions">${createOptions(chapterOptions)}</datalist>
+			`;
+
 			let dataArray = ""; //DATA TO ARRAY
 			let name = "";
 			let icon = game.settings.get('farchievements', 'standarticon');
@@ -1094,11 +1125,11 @@
 						</div>
 						<div class="achEditMetadata">
 							<label>Campaign:</label>
-							<input class="AchInputMeta" type="text" id="achievementCampaign${name}" onchange="updateAchievement(12, '${name}')" value="${campaign}">
+							<input class="AchInputMeta" type="text" id="achievementCampaign${name}" list="achievementCampaignOptions" onchange="updateAchievement(12, '${name}')" value="${campaign}">
 							<label>Adventure:</label>
-							<input class="AchInputMeta" type="text" id="achievementAdventure${name}" onchange="updateAchievement(13, '${name}')" value="${adventure}">
+							<input class="AchInputMeta" type="text" id="achievementAdventure${name}" list="achievementAdventureOptions" onchange="updateAchievement(13, '${name}')" value="${adventure}">
 							<label>Chapter:</label>
-							<input class="AchInputMeta" type="text" id="achievementChapter${name}" onchange="updateAchievement(14, '${name}')" value="${chapter}">
+							<input class="AchInputMeta" type="text" id="achievementChapter${name}" list="achievementChapterOptions" onchange="updateAchievement(14, '${name}')" value="${chapter}">
 						</div>
 						<div class="achEditPoints">
 							<label>${langScore}:</label>
