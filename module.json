@@ -1,6 +1,6 @@
 {
-	"id": "farchievements",
-	"title": "Foundry Achievements",
+	"id": "PF2e-Achievements",
+	"title": "PF2e-Achievements",
 	"description": "Achievements for FoundryVTT",
 	"version": "13.03",
 	"author": "Handyfon",
@@ -29,3 +29,4 @@
 	}
 
 }
+
