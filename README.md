@@ -28,6 +28,16 @@ To install this module manually:
 4.  Click 'Install' and wait for installation to complete
 5.  Don't forget to enable the module in game using the "Manage Module" button
 
+### Local ZIP installation
+
+If you're installing from a local ZIP file instead of the manifest URL:
+
+1.  Copy the module ZIP into Foundry's data folder under `Data/modules/`.
+2.  Ensure the ZIP is named exactly `PF2e-Achievements.zip` (or adjust the install path to match your actual filename).
+3.  Verify the file exists at `.../Data/modules/PF2e-Achievements.zip` in the Foundry file browser or via shell before retrying install.
+
+> Tip: You can always install using the manifest URL above, and Foundry will download the ZIP automatically.
+
 # Features
 
 <h1>Images and Gifs:</h1>
