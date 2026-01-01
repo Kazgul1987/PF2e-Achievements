@@ -1497,9 +1497,9 @@
 			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
 			let reload = false;
 
-			// Helper function to remove ' and " from strings
+			// Helper function to remove control characters from strings
 			function sanitizeInput(input) {
-				return input.replace(/['"]/g, '');
+				return input.replace(/[\u0000-\u001F\u007F]/g, '').trim();
 			}
 
 			if (updateType === 1) { // NAME
@@ -1556,17 +1556,17 @@
 			}
 
 			if (updateType === 12) { // CAMPAIGN
-				let newCampaign = sanitizeInput(document.getElementById('achievementCampaign' + achievementname).value);
+				let newCampaign = document.getElementById('achievementCampaign' + achievementname).value.trim();
 				AchievementData.filter(x => x.name == achievementname)[0].campaign = newCampaign;
 			}
 
 			if (updateType === 13) { // ADVENTURE
-				let newAdventure = sanitizeInput(document.getElementById('achievementAdventure' + achievementname).value);
+				let newAdventure = document.getElementById('achievementAdventure' + achievementname).value.trim();
 				AchievementData.filter(x => x.name == achievementname)[0].adventure = newAdventure;
 			}
 
 			if (updateType === 14) { // CHAPTER
-				let newChapter = sanitizeInput(document.getElementById('achievementChapter' + achievementname).value);
+				let newChapter = document.getElementById('achievementChapter' + achievementname).value.trim();
 				AchievementData.filter(x => x.name == achievementname)[0].chapter = newChapter;
 			}
 			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
