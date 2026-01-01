@@ -169,6 +169,10 @@
     "Farchievements.ViewAchievements": "Zeige Errungenschaften an",
     "Farchievements.NewAchievement": "Neue Errungenschaft:",
     "Farchievements.GainedAchivement": "erhält die",
+    "Farchievements.Dialog.UnlockForAll": "Für alle freischalten",
+    "Farchievements.Dialog.UnlockForAllTitle": "Für alle Spieler freischalten?",
+    "Farchievements.Dialog.UnlockForAllContent": "Dies schaltet \"{achievement}\" für alle Spieler frei. Fortfahren?",
+    "Farchievements.Notification.UnlockForAll": "Errungenschaft für alle Spieler freigeschaltet.",
 
     "Farchievements.Html.SeeEverything": "Alles sehen",
     "Farchievements.Html.Scoreboard": "Punktetafel",

@@ -139,6 +139,10 @@
     "Farchievements.NewAchievement": "新しいアチーブメント:",
     "Farchievements.AchievementsSynced": "アチーブメント同期",
     "Farchievements.GainedAchivement": "獲得しました",
+    "Farchievements.Dialog.UnlockForAll": "全員に解放",
+    "Farchievements.Dialog.UnlockForAllTitle": "全員に解放しますか？",
+    "Farchievements.Dialog.UnlockForAllContent": "「{achievement}」を全員に解放します。続行しますか？",
+    "Farchievements.Notification.UnlockForAll": "全員にアチーブメントを解放しました。",
 
     "Farchievements.Html.SeeEverything": "全てを見る",
     "Farchievements.Html.Scoreboard": "スコアボード",

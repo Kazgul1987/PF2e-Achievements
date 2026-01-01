@@ -1066,15 +1066,63 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
         </div>
     `;
 
+    let dialogButtons = {
+        close: {
+            label: "Close",
+            callback: () => {}
+        }
+    };
+
+    if (game.user.isGM) {
+        dialogButtons.unlockForAll = {
+            label: game.i18n.localize('Farchievements.Dialog.UnlockForAll'),
+            callback: () => {
+                Dialog.confirm({
+                    title: game.i18n.localize('Farchievements.Dialog.UnlockForAllTitle'),
+                    content: game.i18n.format('Farchievements.Dialog.UnlockForAllContent', { achievement: achievement.name }),
+                    yes: async () => {
+                        let updatedList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+                        let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
+
+                        if (!updatedAchievement) {
+                            ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
+                            return;
+                        }
+
+                        let achievementInstance = new Achievement(
+                            updatedAchievement.name,
+                            updatedAchievement.description,
+                            updatedAchievement.image,
+                            updatedAchievement.players,
+                            updatedAchievement.seenBy,
+                            updatedAchievement.playerDates,
+                            updatedAchievement.progressRequired,
+                            updatedAchievement.progressType,
+                            updatedAchievement.playerProgress,
+                            updatedAchievement.chainLength,
+                            updatedAchievement.diceType,
+                            updatedAchievement.campaign,
+                            updatedAchievement.adventure,
+                            updatedAchievement.chapter
+                        );
+
+                        let targetUsers = game.users.filter(user => !user.isGM);
+                        targetUsers.forEach(user => achievementInstance.addPlayer(user.id));
+
+                        let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
+                        await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(finalList));
+                        SendSyncMessage();
+                        ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForAll'));
+                    }
+                });
+            }
+        };
+    }
+
     new Dialog({
         title: "Achievement Unlocked!",
         content: popupContent,
-        buttons: {
-            close: {
-                label: "Close",
-                callback: () => {}
-            }
-        }
+        buttons: dialogButtons
     }).render(true);
 };
 
