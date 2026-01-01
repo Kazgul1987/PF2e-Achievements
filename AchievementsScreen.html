@@ -1351,22 +1351,7 @@
 			let achievementIndex = AchievementData.findIndex(x => x.name === achievementname);
 			if (achievementIndex === -1) return; // If achievement not found, exit
 
-			let achievement = new Achievement(
-				AchievementData[achievementIndex].name,
-				AchievementData[achievementIndex].description,
-				AchievementData[achievementIndex].image,
-				AchievementData[achievementIndex].points,
-				AchievementData[achievementIndex].glowing,
-				AchievementData[achievementIndex].color,
-				AchievementData[achievementIndex].players,
-				AchievementData[achievementIndex].seenBy,
-				AchievementData[achievementIndex].playerDates,
-				AchievementData[achievementIndex].progressRequired,
-				AchievementData[achievementIndex].progressType,
-				AchievementData[achievementIndex].playerProgress,
-				AchievementData[achievementIndex].chainLength,
-				AchievementData[achievementIndex].diceType
-			);
+			let achievement = Object.assign(new Achievement(), AchievementData[achievementIndex]);
 
 			// Add or remove the player from this specific achievement
 			if (achievement && Array.isArray(achievement.players)) {
