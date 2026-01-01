@@ -701,8 +701,16 @@
 				return total;
 			};
 
-			const buildGroupTitle = (label, count, tag, extraClass = "") =>
-				`<${tag} class="achievement-group-title ${extraClass}">${label} <span class="achievement-count">(${count})</span></${tag}>`;
+			const collapsedGroups = new Set(game.settings.get('farchievements', 'collapsedGroups') || []);
+			const buildGroupId = (type, label) => `${type}:${label}`;
+			const escapeAttribute = (value) =>
+				String(value)
+					.replace(/&/g, "&amp;")
+					.replace(/"/g, "&quot;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;");
+			const buildGroupTitle = (label, count, tag, groupId, extraClass = "") =>
+				`<${tag} class="achievement-group-title ${extraClass}"><button type="button" class="achievement-group-toggle" data-group-id="${escapeAttribute(groupId)}"><span class="achievement-group-label">${label}</span> <span class="achievement-count">(${count})</span></button></${tag}>`;
 
 			let groupedHTML = "";
 			if (activeTab === "campaign") {
@@ -713,9 +721,11 @@
 							campaignAchievements.push(...achievements);
 						});
 					});
+					const campaignGroupId = buildGroupId("campaign", campaignName);
+					const campaignCollapsedClass = collapsedGroups.has(campaignGroupId) ? " is-collapsed" : "";
 					groupedHTML += `
-						<section class="achievement-group achievement-group-campaign">
-							${buildGroupTitle(campaignName, campaignAchievements.length, "h3")}
+						<section class="achievement-group achievement-group-campaign${campaignCollapsedClass}" data-group-id="${escapeAttribute(campaignGroupId)}">
+							${buildGroupTitle(campaignName, campaignAchievements.length, "h3", campaignGroupId)}
 							<div class="achievement-chapter-grid">
 								${campaignAchievements.join("")}
 							</div>
@@ -730,18 +740,22 @@
 						chapterMap.forEach((achievements) => {
 							adventureAchievements.push(...achievements);
 						});
+						const adventureGroupId = buildGroupId("adventure", adventureName);
+						const adventureCollapsedClass = collapsedGroups.has(adventureGroupId) ? " is-collapsed" : "";
 						adventureGroups += `
-							<div class="achievement-group achievement-group-adventure">
-								${buildGroupTitle(adventureName, adventureAchievements.length, "h4")}
+							<div class="achievement-group achievement-group-adventure${adventureCollapsedClass}" data-group-id="${escapeAttribute(adventureGroupId)}">
+								${buildGroupTitle(adventureName, adventureAchievements.length, "h4", adventureGroupId)}
 								<div class="achievement-chapter-grid">
 									${adventureAchievements.join("")}
 								</div>
 							</div>
 						`;
 					});
+					const campaignGroupId = buildGroupId("campaign", campaignName);
+					const campaignCollapsedClass = collapsedGroups.has(campaignGroupId) ? " is-collapsed" : "";
 					groupedHTML += `
-						<section class="achievement-group achievement-group-campaign">
-							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3")}
+						<section class="achievement-group achievement-group-campaign${campaignCollapsedClass}" data-group-id="${escapeAttribute(campaignGroupId)}">
+							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3", campaignGroupId)}
 							${adventureGroups}
 						</section>
 					`;
@@ -754,25 +768,31 @@
 						let adventureCount = 0;
 						chapterMap.forEach((achievements, chapterName) => {
 							adventureCount += achievements.length;
+							const chapterGroupId = buildGroupId("chapter", chapterName);
+							const chapterCollapsedClass = collapsedGroups.has(chapterGroupId) ? " is-collapsed" : "";
 							chapterGroups += `
-								<div class="achievement-group achievement-group-chapter">
-									${buildGroupTitle(chapterName, achievements.length, "h5")}
+								<div class="achievement-group achievement-group-chapter${chapterCollapsedClass}" data-group-id="${escapeAttribute(chapterGroupId)}">
+									${buildGroupTitle(chapterName, achievements.length, "h5", chapterGroupId)}
 									<div class="achievement-chapter-grid">
 										${achievements.join("")}
 									</div>
 								</div>
 							`;
 						});
+						const adventureGroupId = buildGroupId("adventure", adventureName);
+						const adventureCollapsedClass = collapsedGroups.has(adventureGroupId) ? " is-collapsed" : "";
 						adventureGroups += `
-							<div class="achievement-group achievement-group-adventure">
-								${buildGroupTitle(adventureName, adventureCount, "h4")}
+							<div class="achievement-group achievement-group-adventure${adventureCollapsedClass}" data-group-id="${escapeAttribute(adventureGroupId)}">
+								${buildGroupTitle(adventureName, adventureCount, "h4", adventureGroupId)}
 								${chapterGroups}
 							</div>
 						`;
 					});
+					const campaignGroupId = buildGroupId("campaign", campaignName);
+					const campaignCollapsedClass = collapsedGroups.has(campaignGroupId) ? " is-collapsed" : "";
 					groupedHTML += `
-						<section class="achievement-group achievement-group-campaign">
-							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3")}
+						<section class="achievement-group achievement-group-campaign${campaignCollapsedClass}" data-group-id="${escapeAttribute(campaignGroupId)}">
+							${buildGroupTitle(campaignName, countAchievements(adventureMap), "h3", campaignGroupId)}
 							${adventureGroups}
 						</section>
 					`;
@@ -783,6 +803,25 @@
 			achievementListElement.classList.remove('achievement-accordion');
 			achievementListElement.classList.add('achievement-tab-view');
 			achievementListElement.innerHTML = groupedHTML;
+			achievementListElement.onclick = (event) => {
+				const toggle = event.target.closest('.achievement-group-toggle');
+				if (!toggle) return;
+				const groupId = toggle.dataset.groupId;
+				const escapeSelectorValue = (value) =>
+					window.CSS && CSS.escape ? CSS.escape(value) : value.replace(/"/g, '\\"');
+				const groupElement = achievementListElement.querySelector(
+					`.achievement-group[data-group-id="${escapeSelectorValue(groupId)}"]`
+				);
+				if (!groupElement) return;
+				groupElement.classList.toggle('is-collapsed');
+				const updatedGroups = new Set(game.settings.get('farchievements', 'collapsedGroups') || []);
+				if (groupElement.classList.contains('is-collapsed')) {
+					updatedGroups.add(groupId);
+				} else {
+					updatedGroups.delete(groupId);
+				}
+				game.settings.set('farchievements', 'collapsedGroups', Array.from(updatedGroups));
+			};
 
 			// NEW CODE FOR THE TILT EFFECT
 			const achievementCards = document.querySelectorAll('.far-grid-item');
