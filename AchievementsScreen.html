@@ -458,6 +458,7 @@
 					selectedUser = game.users.get(playerIDToLoadFrom) ?? selectedUser;
 					if (!selectedUser) {
 						playerIDToLoadFrom = "";
+						game.settings.set('farchievements', 'loadSettingsForPlayer', "");
 					} else {
 					document.querySelector('.achievementsscreen-window .window-title').innerText = selectedUser.name + game.i18n.localize('Farchievements.Html.PlayersAchievements');
 					let user = selectedUser;
