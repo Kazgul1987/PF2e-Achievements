@@ -383,6 +383,11 @@
 			loadPageNav(AchievementList);
 			let loadingFromPlayer = false;
 			let playerIDToLoadFrom = game.settings.get('farchievements', 'loadSettingsForPlayer'); //RESET PLAYER ID
+			let selectedUser = playerIDToLoadFrom ? game.users.get(playerIDToLoadFrom) : null;
+			if (playerIDToLoadFrom && !selectedUser) {
+				game.settings.set('farchievements', 'loadSettingsForPlayer', "");
+				playerIDToLoadFrom = "";
+			}
 			document.getElementById('CustomAchievmentBackgroundStyling').innerHTML = '<style>.achievementsscreen-window .window-content{background: #232323;}</style>';
 			loadPlayerNav(false);
 			
@@ -447,9 +452,15 @@
 			//CHANGE WINDOW TITLE AND COLOR
 			if(game.users.size>1){
 				if (playerIDToLoadFrom != "" && game.settings.get('farchievements', 'PlayerBackColor') || !game.user.isGM && game.settings.get('farchievements', 'PlayerBackColor')) {
-					if (!game.user.isGM) playerIDToLoadFrom = game.user.id;
-					document.querySelector('.achievementsscreen-window .window-title').innerText = game.users.find(user => user.id == playerIDToLoadFrom).name + game.i18n.localize('Farchievements.Html.PlayersAchievements');
-					let user = game.users.find(user => user.id == playerIDToLoadFrom);
+					if (!game.user.isGM) {
+						playerIDToLoadFrom = game.user.id;
+					}
+					selectedUser = game.users.get(playerIDToLoadFrom) ?? selectedUser;
+					if (!selectedUser) {
+						playerIDToLoadFrom = "";
+					} else {
+					document.querySelector('.achievementsscreen-window .window-title').innerText = selectedUser.name + game.i18n.localize('Farchievements.Html.PlayersAchievements');
+					let user = selectedUser;
 					var r = user.color.r;
 					var g = user.color.g;
 					var b = user.color.b;
@@ -459,15 +470,17 @@
 					var luma = 0.2126 * r + 0.7152 * g + 0.0722 * b; // per ITU-R BT.709
 					let newHexColor = user.color.css;
 					let newVal = -1 + (50 / luma);
-					newHexColor = shadeHexColor(game.users.find(user => user.id == playerIDToLoadFrom).color, newVal);
+					newHexColor = shadeHexColor(user.color, newVal);
 					document.querySelector('.achievementsscreen-window .window-header').style['background'] = newHexColor;
 					newVal = -1 + (30 / luma);
-					newHexColor = shadeHexColor(game.users.find(user => user.id == playerIDToLoadFrom).color, newVal);
+					newHexColor = shadeHexColor(user.color, newVal);
 					document.getElementById('CustomAchievmentBackgroundStyling').innerHTML = '<style>.achievementsscreen-window .window-content{background: ' + newHexColor + ';}</style>';
-					if(game.users.get(playerIDToLoadFrom).character)
-						document.getElementById('playerbackground').style.backgroundImage = "url("+game.users.get(playerIDToLoadFrom).character.img+")";
-					else
+					if(user.character?.img) {
+						document.getElementById('playerbackground').style.backgroundImage = "url("+user.character.img+")";
+					} else {
 						document.getElementById('playerbackground').style.backgroundImage = "";
+					}
+					}
 				}
 				else{
 					document.getElementById('playerbackground').style.backgroundImage = "url("+game.settings.get('farchievements', 'standardBackground')+")";
@@ -477,8 +490,8 @@
 				if (!game.user.isGM) document.getElementById("hiddenforuser3").style = "display:none";
 				if (!game.user.isGM) document.getElementById("hiddenforuser4").style = "display:none";
 			}
-			if(playerIDToLoadFrom)
-				console.log("Loading Achievements for " + game.users.get(playerIDToLoadFrom).name);
+			if(playerIDToLoadFrom && selectedUser)
+				console.log("Loading Achievements for " + selectedUser.name);
 			
 			//APPLY STYLING
 			document.getElementById('CustomAchievmentStyling').innerHTML = "";
