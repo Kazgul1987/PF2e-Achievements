@@ -224,6 +224,7 @@
 				console.error("Farchievements | Failed to load achievements data:", e);
 				return [];
 			}
+			AchievementData = AchievementData.filter(entry => entry && typeof entry === "object");
 
 			let normalizedResult = normalizeAchievementData(AchievementData);
 			AchievementData = normalizedResult.data;
@@ -238,6 +239,9 @@
 
 			// Apply sorting first
 			AchievementData.sort((a, b) => {
+				if (!a && !b) return 0;
+				if (!a) return 1;
+				if (!b) return -1;
 				let nameA = a.name.toLowerCase();
 				let nameB = b.name.toLowerCase();
 				let colorA = a.color || "";
@@ -312,7 +316,7 @@
 		function normalizeAchievementData(achievementData) {
 			let updated = false;
 			let normalizedData = achievementData
-				.filter(Boolean)
+				.filter(entry => entry && typeof entry === "object")
 				.map((achievement) => {
 				if (!achievement || typeof achievement !== "object") {
 					return achievement;
