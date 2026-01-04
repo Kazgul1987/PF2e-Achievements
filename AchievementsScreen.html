@@ -234,6 +234,8 @@
 			let searchValue = game.settings.get('farchievements', 'lastSearchTerm')?.toLowerCase().trim() || "";
 			let sortType = game.settings.get('farchievements', 'lastSortType') || "nameAsc";
 
+			AchievementData = AchievementData.filter(entry => entry && typeof entry === "object");
+
 			// Apply sorting first
 			AchievementData.sort((a, b) => {
 				let nameA = a.name.toLowerCase();
@@ -280,6 +282,8 @@
 
 				AchievementData = AchievementData
 					.map(achievement => {
+						if (!achievement || typeof achievement !== "object") return null;
+
 						let lowerName = achievement.name.toLowerCase();
 						let lowerDesc = achievement.description.toLowerCase();
 						let points = parseInt(achievement.points || 0);
@@ -307,7 +311,9 @@
 
 		function normalizeAchievementData(achievementData) {
 			let updated = false;
-			let normalizedData = achievementData.map((achievement) => {
+			let normalizedData = achievementData
+				.filter(Boolean)
+				.map((achievement) => {
 				if (!achievement || typeof achievement !== "object") {
 					return achievement;
 				}
