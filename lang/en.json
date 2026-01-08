@@ -179,6 +179,13 @@
     "Farchievements.Dialog.UnlockForAllTitle": "Unlock for all players?",
     "Farchievements.Dialog.UnlockForAllContent": "This will unlock \"{achievement}\" for all players. Continue?",
     "Farchievements.Notification.UnlockForAll": "Achievement unlocked for all players.",
+    "Farchievements.Dialog.UnlockForPlayers": "Unlock for selected players",
+    "Farchievements.Dialog.UnlockForPlayersTitle": "Unlock for selected players",
+    "Farchievements.Dialog.UnlockForPlayersConfirm": "Unlock",
+    "Farchievements.Dialog.UnlockForPlayersEmpty": "Select at least one player.",
+    "Farchievements.Dialog.UnlockForPlayersNone": "No non-GM players available.",
+    "Farchievements.Dialog.Cancel": "Cancel",
+    "Farchievements.Notification.UnlockForPlayers": "Achievement unlocked for selected players.",
 
     "Farchievements.Html.SeeEverything": "See Everything",
     "Farchievements.Html.Scoreboard": "Scoreboard",

@@ -143,6 +143,13 @@
     "Farchievements.Dialog.UnlockForAllTitle": "全員に解放しますか？",
     "Farchievements.Dialog.UnlockForAllContent": "「{achievement}」を全員に解放します。続行しますか？",
     "Farchievements.Notification.UnlockForAll": "全員にアチーブメントを解放しました。",
+    "Farchievements.Dialog.UnlockForPlayers": "選択したプレイヤーに解放",
+    "Farchievements.Dialog.UnlockForPlayersTitle": "選択したプレイヤーに解放",
+    "Farchievements.Dialog.UnlockForPlayersConfirm": "解放",
+    "Farchievements.Dialog.UnlockForPlayersEmpty": "少なくとも1人のプレイヤーを選択してください。",
+    "Farchievements.Dialog.UnlockForPlayersNone": "非GMプレイヤーがいません。",
+    "Farchievements.Dialog.Cancel": "キャンセル",
+    "Farchievements.Notification.UnlockForPlayers": "選択したプレイヤーにアチーブメントを解放しました。",
 
     "Farchievements.Html.SeeEverything": "全てを見る",
     "Farchievements.Html.Scoreboard": "スコアボード",

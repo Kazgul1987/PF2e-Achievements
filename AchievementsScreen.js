@@ -1123,6 +1123,87 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                 });
             }
         };
+        dialogButtons.unlockForPlayers = {
+            label: game.i18n.localize('Farchievements.Dialog.UnlockForPlayers'),
+            callback: () => {
+                let targetUsers = game.users.filter(user => !user.isGM);
+                if (!targetUsers.length) {
+                    ui.notifications.warn(game.i18n.localize('Farchievements.Dialog.UnlockForPlayersNone'));
+                    return;
+                }
+
+                let activePlayerId = typeof getActivePlayer === "function" ? getActivePlayer() : null;
+                let playerOptions = targetUsers
+                    .map(user => {
+                        let checked = activePlayerId === user.id ? "checked" : "";
+                        return `<label style="display: block; margin: 4px 0;">
+                            <input type="checkbox" name="playerIds" value="${user.id}" ${checked}> ${user.name}
+                        </label>`;
+                    })
+                    .join("");
+
+                new Dialog({
+                    title: game.i18n.localize('Farchievements.Dialog.UnlockForPlayersTitle'),
+                    content: `<form>
+                        <div style="max-height: 240px; overflow-y: auto;">
+                            ${playerOptions}
+                        </div>
+                    </form>`,
+                    buttons: {
+                        confirm: {
+                            label: game.i18n.localize('Farchievements.Dialog.UnlockForPlayersConfirm'),
+                            callback: async (html) => {
+                                let selectedIds = Array.from(html[0].querySelectorAll('input[name="playerIds"]:checked'))
+                                    .map(input => input.value);
+
+                                if (!selectedIds.length) {
+                                    ui.notifications.warn(game.i18n.localize('Farchievements.Dialog.UnlockForPlayersEmpty'));
+                                    return;
+                                }
+
+                                let updatedList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+                                let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
+
+                                if (!updatedAchievement) {
+                                    ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
+                                    return;
+                                }
+
+                                let achievementInstance = new Achievement(
+                                    updatedAchievement.name,
+                                    updatedAchievement.description,
+                                    updatedAchievement.image,
+                                    updatedAchievement.points,
+                                    updatedAchievement.glowing,
+                                    updatedAchievement.color,
+                                    updatedAchievement.players,
+                                    updatedAchievement.seenBy,
+                                    updatedAchievement.playerDates,
+                                    updatedAchievement.progressRequired,
+                                    updatedAchievement.progressType,
+                                    updatedAchievement.playerProgress,
+                                    updatedAchievement.chainLength,
+                                    updatedAchievement.diceType,
+                                    updatedAchievement.campaign,
+                                    updatedAchievement.adventure,
+                                    updatedAchievement.chapter
+                                );
+
+                                selectedIds.forEach(userId => achievementInstance.addPlayer(userId));
+
+                                let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
+                                await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(finalList));
+                                SendSyncMessage();
+                                ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForPlayers'));
+                            }
+                        },
+                        cancel: {
+                            label: game.i18n.localize('Farchievements.Dialog.Cancel')
+                        }
+                    }
+                }).render(true);
+            }
+        };
     }
 
     new Dialog({
