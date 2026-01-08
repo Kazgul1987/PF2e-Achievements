@@ -173,6 +173,13 @@
     "Farchievements.Dialog.UnlockForAllTitle": "Für alle Spieler freischalten?",
     "Farchievements.Dialog.UnlockForAllContent": "Dies schaltet \"{achievement}\" für alle Spieler frei. Fortfahren?",
     "Farchievements.Notification.UnlockForAll": "Errungenschaft für alle Spieler freigeschaltet.",
+    "Farchievements.Dialog.UnlockForPlayers": "Für ausgewählte Spieler freischalten",
+    "Farchievements.Dialog.UnlockForPlayersTitle": "Für ausgewählte Spieler freischalten",
+    "Farchievements.Dialog.UnlockForPlayersConfirm": "Freischalten",
+    "Farchievements.Dialog.UnlockForPlayersEmpty": "Bitte mindestens einen Spieler auswählen.",
+    "Farchievements.Dialog.UnlockForPlayersNone": "Keine Nicht-GM-Spieler verfügbar.",
+    "Farchievements.Dialog.Cancel": "Abbrechen",
+    "Farchievements.Notification.UnlockForPlayers": "Errungenschaft für ausgewählte Spieler freigeschaltet.",
 
     "Farchievements.Html.SeeEverything": "Alles sehen",
     "Farchievements.Html.Scoreboard": "Punktetafel",
