@@ -1,5 +1,7 @@
 const moduleId = "PF2e-Achievements";
 const modulePath = `modules/${moduleId}`;
+const SEEN_ACHIEVEMENTS_FLAG = "seenAchievements";
+
 
 Hooks.once('init', function() {
 	const debouncedReload = debounce(() => window.location.reload(), 100);
@@ -464,8 +466,35 @@ class AchievementSync{
 	static sleep(ms){
 	  return new Promise(resolve => setTimeout(resolve, ms));
 	}
+	static async _getSeen(){
+		// Prefer a server-side per-user flag (persists across world restarts and different browsers)
+		let seen = await game.user.getFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG);
+		if (Array.isArray(seen)) return seen;
+		// One-time migration from legacy client setting (string)
+		const legacy = game.settings.get('farchievements', 'clientdata');
+		if (typeof legacy === 'string' && legacy.length) {
+			seen = legacy.split('||||%%%||||').filter(Boolean);
+			await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, seen);
+			return seen;
+		}
+		await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
+		return [];
+	}
+	static async _markSeen(names){
+		const list = (names ?? []).filter(Boolean);
+		if (!list.length) return;
+		const existing = await AchievementSync._getSeen();
+		const merged = Array.from(new Set([...existing, ...list]));
+		await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, merged);
+		// Keep legacy client setting roughly in sync for backwards compatibility
+		try {
+			await game.settings.set('farchievements', 'clientdata', merged.join('||||%%%||||') + '||||%%%||||');
+		} catch (err) { /* ignore */ }
+	}
 	static async PlayAnimation(achievementsGainedList) {
-		await game.settings.set('farchievements', 'clientdata', game.settings.get('farchievements', 'clientdata') + achievementsGainedList);
+		// Mark as "seen" immediately to avoid replay on reconnect/reload
+		const achievementsToMark = achievementsGainedList.split("||||%%%||||").filter(Boolean);
+		await AchievementSync._markSeen(achievementsToMark);
 		
 		let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
 		let achievementsToGain = achievementsGainedList.split("||||%%%||||");
@@ -526,7 +555,7 @@ class AchievementSync{
 			document.getElementById("Achievementbar").style.setProperty("display", "none");
 		}
 	}
-	static SyncAchievements(skip = null, start = false){
+	static async SyncAchievements(skip = null, start = false){
 		//console.log("SYNC Achievements");//DEBUG
 		if(game.user.isGM){
 			if(!game.ready) return; //IF GAME IS READY, ELSE CHANGES WOULDN'T BE SAVED
@@ -539,11 +568,11 @@ class AchievementSync{
 		else{//IF USER IS PLAYER
 			//FOR EACH ACHIEVEMENT IF NOT IN CLIENTDATA PLAY ANIMATION AND ADD IT
 			let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
-			let existingAchievements = game.settings.get('farchievements', 'clientdata');
+			let existingAchievements = await AchievementSync._getSeen();
 			let AchievementsToPlay = "";
 			
 			AchievementList.forEach(function (achievement, index) {
-				if (achievement.players && achievement.players.includes(game.userId)) {
+				if (achievement.players && achievement.players.includes(game.user.id)) {
 					if (existingAchievements.includes(achievement.name)) return;
 					AchievementsToPlay += achievement.name + "||||%%%||||";
 				}
@@ -552,7 +581,8 @@ class AchievementSync{
 			if(AchievementsToPlay != ""){
 				let amount = AchievementsToPlay.split("||||%%%||||").length -1;
 				if(skip == true){
-					game.settings.set('farchievements', 'clientdata', game.settings.get('farchievements', 'clientdata') + AchievementsToPlay);
+					const names = AchievementsToPlay.split("||||%%%||||").filter(Boolean);
+					await AchievementSync._markSeen(names);
 					return;
 				}
 				if(start && amount > 0){
@@ -568,8 +598,9 @@ class AchievementSync{
 							two: {
 								icon: '<i class="fas fa-times"></i>',
 								label: `${game.i18n.localize('Farchievements.Html.SanitySaver.ButtonSkip')}`,
-								callback: () => {
-									game.settings.set('farchievements', 'clientdata', game.settings.get('farchievements', 'clientdata') + AchievementsToPlay);
+								callback: async () => {
+									const names = AchievementsToPlay.split("||||%%%||||").filter(Boolean);
+									await AchievementSync._markSeen(names);
 								}
 							}
 						}
@@ -865,11 +896,19 @@ window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
 	await game.settings.set('farchievements', 'achievementdataNEW',"");
 	await game.settings.set('farchievements', 'clientdataSYNC',"");
 	await game.settings.set('farchievements', 'clientdata', "");
+	// Also clear per-user "seen" flags
+	for (const u of game.users.contents) {
+		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
+	}
 }
 window.farchievements_DEBUG_Reset_PlayerAchievements = async function resetPlayers(){
 	if(!game.user.isGM) return;
 	await game.settings.set('farchievements', 'clientdataSYNC',"");
 	await game.settings.set('farchievements', 'clientdata', "");
+	// Also clear per-user \"seen\" flags
+	for (const u of game.users.contents) {
+		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
+	}
 	location.reload();
 }
 //PUBLICLY ACCESSIBLE FUNCTIONS		
@@ -1605,7 +1644,3 @@ class Achievement {
 		}
 	}
 }
-
-
-
-
