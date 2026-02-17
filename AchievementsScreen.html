@@ -1473,6 +1473,23 @@
 						label: `<a style="color:orange;" >${game.i18n.localize('Farchievements.Html.ImportExport.AppendFromInput')}</a>`,
 						icon: '<i class="fas fa-plus" style="color:orange;"></i>',
 						callback: async () => {
+							const sanitizeString = (value) => {
+								if (typeof value !== 'string') return "";
+								return value.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+							};
+							const getUniqueAchievementName = (requestedName, existingNames) => {
+								const baseName = sanitizeString(requestedName);
+								if (!existingNames.has(baseName)) return baseName;
+
+								let suffix = 2;
+								let candidate = `${baseName} (${suffix})`;
+								while (existingNames.has(candidate)) {
+									suffix += 1;
+									candidate = `${baseName} (${suffix})`;
+								}
+								return candidate;
+							};
+
 							let inputElement = document.getElementById("ImportExportInput");
 							let raw = inputElement.value.trim();
 							let parsedInput;
@@ -1511,9 +1528,47 @@
 								existingAchievements = [];
 							}
 
-							let mergedAchievements = existingAchievements.concat(importedAchievements);
+							const existingNames = new Set(existingAchievements
+								.map(achievement => sanitizeString(achievement?.name))
+								.filter(name => !!name)
+							);
+							let skippedAchievements = 0;
+							const validImportedAchievements = [];
+
+							for (const achievement of importedAchievements) {
+								if (!achievement || typeof achievement !== 'object') {
+									skippedAchievements += 1;
+									continue;
+								}
+
+								const sanitizedName = sanitizeString(achievement.name);
+								if (!sanitizedName) {
+									skippedAchievements += 1;
+									continue;
+								}
+
+								const uniqueName = getUniqueAchievementName(sanitizedName, existingNames);
+								existingNames.add(uniqueName);
+
+								validImportedAchievements.push({
+									...achievement,
+									name: uniqueName,
+									description: sanitizeString(achievement.description),
+									image: sanitizeString(achievement.image)
+								});
+							}
+
+							if (validImportedAchievements.length === 0) {
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+								return;
+							}
+
+							let mergedAchievements = existingAchievements.concat(validImportedAchievements);
 							await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(mergedAchievements));
-							ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.AppendedFromInput'));
+							if (skippedAchievements > 0) {
+								ui.notifications.warn(`${notificationPrefix}${skippedAchievements} invalid achievements were skipped.`);
+							}
+							ui.notifications.notify(`${notificationPrefix}${validImportedAchievements.length} achievements appended successfully.`);
 							reloadAchievements();
 						}
 					},
