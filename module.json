@@ -2,7 +2,7 @@
 	"id": "PF2e-Achievements",
 	"title": "PF2e-Achievements",
 	"description": "Achievements for FoundryVTT",
-	"version": "13.05",
+	"version": "13.06",
 	"author": "Handyfon",
 	"esmodules": ["AchievementsScreen.js"],
 	"styles": ["AchievementsScreen.css"],
@@ -29,6 +29,7 @@
 	}
 
 }
+
 
 
 
