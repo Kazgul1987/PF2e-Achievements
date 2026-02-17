@@ -1469,6 +1469,48 @@
 				title: game.i18n.localize('Farchievements.Html.ImportExport.Title'),
 				content: `<p>${game.i18n.localize('Farchievements.Html.ImportExport.Body')}</p><input type="text" id="ImportExportInput" value='${data}'></input>`,
 				buttons: {
+					AchAppend: {
+						label: `<a style="color:orange;" >${game.i18n.localize('Farchievements.Html.ImportExport.AppendFromInput')}</a>`,
+						icon: '<i class="fas fa-plus" style="color:orange;"></i>',
+						callback: async () => {
+							let inputElement = document.getElementById("ImportExportInput");
+							let parsedInput;
+
+							try {
+								parsedInput = JSON.parse(inputElement.value);
+							}
+							catch (error) {
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+								return;
+							}
+
+							let importedAchievements = Array.isArray(parsedInput) ? parsedInput : [parsedInput];
+							let normalizedResult = normalizeAchievementData(importedAchievements);
+							importedAchievements = normalizedResult.data;
+
+							if (!Array.isArray(importedAchievements) || importedAchievements.length === 0) {
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+								return;
+							}
+
+							let existingAchievements;
+							try {
+								existingAchievements = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+							}
+							catch (error) {
+								existingAchievements = [];
+							}
+
+							if (!Array.isArray(existingAchievements)) {
+								existingAchievements = [];
+							}
+
+							let mergedAchievements = existingAchievements.concat(importedAchievements);
+							await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(mergedAchievements));
+							ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.AppendedFromInput'));
+							reloadAchievements();
+						}
+					},
 					AchOverride: {
 						label: `<a style="color:red;" >${game.i18n.localize('Farchievements.Html.ImportExport.ClipboardOverwrite')}</a>`,
 						icon: '<i class="fas fa-exclamation-triangle" style="color:red"></i>',
