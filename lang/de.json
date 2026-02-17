@@ -159,7 +159,8 @@
         "InvalidData": "Diese Daten scheinen ungültig zu sein, bitte stelle sicher, dass du die korrekten Daten kopierst.",
         "NoChange": "Die Daten haben sich nicht verändert.",
         "Overwritten": "Die Errungenschaften dieser Welt wurden überschrieben.",
-        "CopiedToClipboard": "Errungenschaften in die Zwischenablage kopiert."
+        "CopiedToClipboard": "Errungenschaften in die Zwischenablage kopiert.",
+        "AppendedFromInput": "Errungenschaften wurden angehängt."
     },
     
 	"Farchievements.Html.Secret": "Geheim",
@@ -195,13 +196,14 @@
     "Farchievements.Html.ValuetoRoll": "Wert zum Würfeln", 
     "Farchievements.Html.ProgressType": "Fortschrittstyp", 
     "Farchievements.Html.DiceType": "Würfeltyp", 
-    "Farchievements.Html.ChainLength": "Kettenlänge"
+    "Farchievements.Html.ChainLength": "Kettenlänge",
 
     "Farchievements.Html.ImportExport":{
         "Title": "Farchievement Import/Export",
         "Body": "Ein kleines Werkzeug um deine Errungenschaften zu importieren und zu exportieren. <br><b>Bitte erstelle ein Backup, bevor du daran denkst, überschreiben zu drücken!</b>",
         "ClipboardOverwrite": "Aus Zwischenablage überschreiben",
-        "CopyToClipboard": "In Zwischenablage kopieren"
+        "CopyToClipboard": "In Zwischenablage kopieren",
+        "AppendFromInput": "Aus Eingabe anhängen"
     },
 	"Farchievements.Html.SanitySaver":{
         "Title": "Farchievements | Vernunftretter",

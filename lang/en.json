@@ -164,7 +164,8 @@
         "InvalidData": "This data seems to be invalid, make sure to copy the correct data.",
         "NoChange": "The data did not change.",
         "Overwritten": "This World's Achievements have been overwritten.",
-        "CopiedToClipboard": "Achievements copied to clipboard."
+        "CopiedToClipboard": "Achievements copied to clipboard.",
+        "AppendedFromInput": "Achievements have been appended."
     },
 	
     "Farchievements.Html.Secret": "Secret",
@@ -208,7 +209,8 @@
         "Title": "Farchievements Import/Export",
         "Body": "This is a small tool to import and export your Achievements. <b>Make sure to backup everything before you even think about overriding!!</b>",
         "ClipboardOverwrite": "Overwrite from Clipboard",
-        "CopyToClipboard": "Copy to Clipboard"
+        "CopyToClipboard": "Copy to Clipboard",
+        "AppendFromInput": "Append from Input"
     },
 	"Farchievements.Html.SanitySaver":{
         "Title": "Farchievements | sanity saver",
