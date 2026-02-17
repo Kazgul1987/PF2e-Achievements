@@ -1454,6 +1454,140 @@
 			await game.settings.set('farchievements', 'ListView', !game.settings.get('farchievements', 'ListView'));
 			reloadAchievements();
 		}
+		function sanitizeAchievementString(value) {
+			if (typeof value !== 'string') return "";
+			return value.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+		}
+		function getUniqueAchievementName(requestedName, existingNames) {
+			const baseName = sanitizeAchievementString(requestedName);
+			if (!existingNames.has(baseName)) return baseName;
+
+			let suffix = 2;
+			let candidate = `${baseName} (${suffix})`;
+			while (existingNames.has(candidate)) {
+				suffix += 1;
+				candidate = `${baseName} (${suffix})`;
+			}
+			return candidate;
+		}
+		async function appendAchievementsFromRaw(raw) {
+			let parsedInput;
+
+			try {
+				parsedInput = JSON.parse(raw);
+			}
+			catch (error) {
+				throw new Error('invalidData');
+			}
+
+			let importedAchievements = Array.isArray(parsedInput) ? parsedInput : [parsedInput];
+			let normalizedResult = normalizeAchievementData(importedAchievements);
+			importedAchievements = normalizedResult.data;
+
+			if (!Array.isArray(importedAchievements) || importedAchievements.length === 0) {
+				throw new Error('invalidData');
+			}
+
+			let existingAchievements;
+			try {
+				existingAchievements = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			}
+			catch (error) {
+				existingAchievements = [];
+			}
+
+			if (!Array.isArray(existingAchievements)) {
+				existingAchievements = [];
+			}
+
+			const existingNames = new Set(existingAchievements
+				.map(achievement => sanitizeAchievementString(achievement?.name))
+				.filter(name => !!name)
+			);
+			let skippedAchievements = 0;
+			const validImportedAchievements = [];
+
+			for (const achievement of importedAchievements) {
+				if (!achievement || typeof achievement !== 'object') {
+					skippedAchievements += 1;
+					continue;
+				}
+
+				const sanitizedName = sanitizeAchievementString(achievement.name);
+				if (!sanitizedName) {
+					skippedAchievements += 1;
+					continue;
+				}
+
+				const uniqueName = getUniqueAchievementName(sanitizedName, existingNames);
+				existingNames.add(uniqueName);
+
+				validImportedAchievements.push({
+					...achievement,
+					name: uniqueName,
+					description: sanitizeAchievementString(achievement.description),
+					image: sanitizeAchievementString(achievement.image)
+				});
+			}
+
+			if (validImportedAchievements.length === 0) {
+				throw new Error('invalidData');
+			}
+
+			let mergedAchievements = existingAchievements.concat(validImportedAchievements);
+			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(mergedAchievements));
+
+			return {
+				appended: validImportedAchievements.length,
+				skipped: skippedAchievements
+			};
+		}
+		async function openAppendInputDialog(notificationPrefix) {
+			let $appendDialog = $('.ImportExportAppendWindow');
+			if ($appendDialog.length > 0) {
+				$appendDialog.remove();
+			}
+
+			const dialogOptions = {
+				classes: ['dialog ImportExportAppendWindow']
+			};
+
+			new Dialog({
+				title: game.i18n.localize('Farchievements.Html.ImportExport.AppendDialogTitle'),
+				content: `
+					<p>${game.i18n.localize('Farchievements.Html.ImportExport.AppendDialogHintSingle')}</p>
+					<p>${game.i18n.localize('Farchievements.Html.ImportExport.AppendDialogHintMultiple')}</p>
+					<textarea id="AppendImportExportInput" style="width:100%;min-height:260px;resize:vertical;"></textarea>
+				`,
+				buttons: {
+					AchAppendConfirm: {
+						label: `<a style="color:orange;">${game.i18n.localize('Farchievements.Html.ImportExport.AppendFromInput')}</a>`,
+						icon: '<i class="fas fa-plus" style="color:orange;"></i>',
+						callback: async () => {
+							let inputElement = document.getElementById("AppendImportExportInput");
+							let raw = inputElement?.value?.trim() || "";
+
+							if (!raw) {
+								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
+								return;
+							}
+
+							try {
+								const result = await appendAchievementsFromRaw(raw);
+								if (result.skipped > 0) {
+									ui.notifications.warn(`${notificationPrefix}${result.skipped} invalid achievements were skipped.`);
+								}
+								ui.notifications.notify(`${notificationPrefix}${result.appended} achievements appended successfully.`);
+								reloadAchievements();
+							}
+							catch (error) {
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+							}
+						}
+					}
+				}
+			}, dialogOptions).render(true);
+		}
 		async function openImportExport() {
 			let $dialog = $('.ImportExportWindow');
 			if ($dialog.length > 0) {
@@ -1472,105 +1606,7 @@
 					AchAppend: {
 						label: `<a style="color:orange;" >${game.i18n.localize('Farchievements.Html.ImportExport.AppendFromInput')}</a>`,
 						icon: '<i class="fas fa-plus" style="color:orange;"></i>',
-						callback: async () => {
-							const sanitizeString = (value) => {
-								if (typeof value !== 'string') return "";
-								return value.replace(/[\u0000-\u001F\u007F]/g, '').trim();
-							};
-							const getUniqueAchievementName = (requestedName, existingNames) => {
-								const baseName = sanitizeString(requestedName);
-								if (!existingNames.has(baseName)) return baseName;
-
-								let suffix = 2;
-								let candidate = `${baseName} (${suffix})`;
-								while (existingNames.has(candidate)) {
-									suffix += 1;
-									candidate = `${baseName} (${suffix})`;
-								}
-								return candidate;
-							};
-
-							let inputElement = document.getElementById("ImportExportInput");
-							let raw = inputElement.value.trim();
-							let parsedInput;
-
-							if (!raw) {
-								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
-								return;
-							}
-
-							try {
-								parsedInput = JSON.parse(raw);
-							}
-							catch (error) {
-								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
-								return;
-							}
-
-							let importedAchievements = Array.isArray(parsedInput) ? parsedInput : [parsedInput];
-							let normalizedResult = normalizeAchievementData(importedAchievements);
-							importedAchievements = normalizedResult.data;
-
-							if (!Array.isArray(importedAchievements) || importedAchievements.length === 0) {
-								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
-								return;
-							}
-
-							let existingAchievements;
-							try {
-								existingAchievements = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
-							}
-							catch (error) {
-								existingAchievements = [];
-							}
-
-							if (!Array.isArray(existingAchievements)) {
-								existingAchievements = [];
-							}
-
-							const existingNames = new Set(existingAchievements
-								.map(achievement => sanitizeString(achievement?.name))
-								.filter(name => !!name)
-							);
-							let skippedAchievements = 0;
-							const validImportedAchievements = [];
-
-							for (const achievement of importedAchievements) {
-								if (!achievement || typeof achievement !== 'object') {
-									skippedAchievements += 1;
-									continue;
-								}
-
-								const sanitizedName = sanitizeString(achievement.name);
-								if (!sanitizedName) {
-									skippedAchievements += 1;
-									continue;
-								}
-
-								const uniqueName = getUniqueAchievementName(sanitizedName, existingNames);
-								existingNames.add(uniqueName);
-
-								validImportedAchievements.push({
-									...achievement,
-									name: uniqueName,
-									description: sanitizeString(achievement.description),
-									image: sanitizeString(achievement.image)
-								});
-							}
-
-							if (validImportedAchievements.length === 0) {
-								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
-								return;
-							}
-
-							let mergedAchievements = existingAchievements.concat(validImportedAchievements);
-							await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(mergedAchievements));
-							if (skippedAchievements > 0) {
-								ui.notifications.warn(`${notificationPrefix}${skippedAchievements} invalid achievements were skipped.`);
-							}
-							ui.notifications.notify(`${notificationPrefix}${validImportedAchievements.length} achievements appended successfully.`);
-							reloadAchievements();
-						}
+						callback: async () => openAppendInputDialog(notificationPrefix)
 					},
 					AchOverride: {
 						label: `<a style="color:red;" >${game.i18n.localize('Farchievements.Html.ImportExport.ClipboardOverwrite')}</a>`,
