@@ -1474,10 +1474,16 @@
 						icon: '<i class="fas fa-plus" style="color:orange;"></i>',
 						callback: async () => {
 							let inputElement = document.getElementById("ImportExportInput");
+							let raw = inputElement.value.trim();
 							let parsedInput;
 
+							if (!raw) {
+								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
+								return;
+							}
+
 							try {
-								parsedInput = JSON.parse(inputElement.value);
+								parsedInput = JSON.parse(raw);
 							}
 							catch (error) {
 								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
@@ -1514,14 +1520,26 @@
 					AchOverride: {
 						label: `<a style="color:red;" >${game.i18n.localize('Farchievements.Html.ImportExport.ClipboardOverwrite')}</a>`,
 						icon: '<i class="fas fa-exclamation-triangle" style="color:red"></i>',
-						callback: () => {
+						callback: async () => {
 							let inputElement = document.getElementById("ImportExportInput");
-							let AchievementList = JSON.parse(inputElement.value);
+							let raw = inputElement.value.trim();
+							let AchievementList;
+
+							if (!raw) {
+								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
+								return;
+							}
+
+							try {
+								AchievementList = JSON.parse(raw);
+							}
+							catch (error) {
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+								return;
+							}
+
 							let normalizedResult = normalizeAchievementData(AchievementList);
 							AchievementList = normalizedResult.data;
-							document.body.appendChild(inputElement);
-							inputElement.select();
-							document.execCommand('paste');
 							if (AchievementList == "") {
 								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
 								return;
