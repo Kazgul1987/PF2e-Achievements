@@ -203,7 +203,10 @@
         "Body": "Ein kleines Werkzeug um deine Errungenschaften zu importieren und zu exportieren. <br><b>Bitte erstelle ein Backup, bevor du daran denkst, überschreiben zu drücken!</b>",
         "ClipboardOverwrite": "Aus Zwischenablage überschreiben",
         "CopyToClipboard": "In Zwischenablage kopieren",
-        "AppendFromInput": "Aus Eingabe anhängen"
+        "AppendFromInput": "Aus Eingabe anhängen",
+        "AppendDialogTitle": "Errungenschaften anhängen",
+        "AppendDialogHintSingle": "Einzelnes Achievement als JSON-Objekt ohne `[]`",
+        "AppendDialogHintMultiple": "Mehrere Achievements als JSON-Array mit `[]`"
     },
 	"Farchievements.Html.SanitySaver":{
         "Title": "Farchievements | Vernunftretter",

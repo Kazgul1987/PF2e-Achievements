@@ -210,7 +210,10 @@
         "Body": "This is a small tool to import and export your Achievements. <b>Make sure to backup everything before you even think about overriding!!</b>",
         "ClipboardOverwrite": "Overwrite from Clipboard",
         "CopyToClipboard": "Copy to Clipboard",
-        "AppendFromInput": "Append from Input"
+        "AppendFromInput": "Append from Input",
+        "AppendDialogTitle": "Append Achievements",
+        "AppendDialogHintSingle": "Single achievement as JSON object without `[]`",
+        "AppendDialogHintMultiple": "Multiple achievements as JSON array with `[]`"
     },
 	"Farchievements.Html.SanitySaver":{
         "Title": "Farchievements | sanity saver",
