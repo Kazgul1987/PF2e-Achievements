@@ -5,9 +5,11 @@
 		{{localize 'Farchievements.Html.SeeEverything'}}<input id="AchSwitchInput" type="checkbox" style="align-items: center;">
 	</label>
 </div>
-<div class="Achievementssettings" id="hiddenforuser" style="text-align: -webkit-right; z-index:2;"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
-<div class="Achievementssettings" id="hiddenforuser2" style="text-align: -webkit-right; z-index:1;"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
-<div class="Achievementssettings" id="hiddenforuser4" style="text-align: -webkit-right;"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
+<div id="achHeaderTools" class="ach-header-tools">
+	<div id="hiddenforuser"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
+	<div id="hiddenforuser2"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
+	<div id="hiddenforuser4"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
+</div>
 <head onload="onLoad()">
 	<head>
 	</head>

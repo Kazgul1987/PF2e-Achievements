@@ -23,7 +23,6 @@ i.fas.fa-list.listViewSettings {
     border-radius: 2px;
     background: #000000d9;
     color: white;
-    margin-right: 68px;
 }
 i.fas.fa-list.listViewSettings:active {
     background: white;
@@ -413,9 +412,15 @@ i.fas.fa-file-export.achievementImportExport:active {
     color: black;
 }
 .Achievementssettings {
+}
+.ach-header-tools {
     position: absolute;
-    top: 2px;
-    right: 64px;
+    top: 4px;
+    right: 120px;
+    z-index: 3;
+    display: flex;
+    gap: 6px;
+    align-items: center;
 }
 i.fas.fa-plus-square.achievementsettings {
     width: 100px;
@@ -542,7 +547,6 @@ i.fas.fa-file-export.achievementImportExport {
     border-radius: 2px;
     background: #000000d9;
     color: white;
-    margin-right: 35px;
 }
 .AchEnableLabel:active {
     background: #000000;
