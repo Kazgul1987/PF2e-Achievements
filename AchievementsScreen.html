@@ -1,18 +1,6 @@
 <!DOCTYPE html>
 <html id="AchievementsScreen">
-<div class="OmniView" id="hiddenforuser3">
-	<label class="AchSwitch" style="display: flex;align-items: center;" onclick="toggleOmniView()">
-		{{localize 'Farchievements.Html.SeeEverything'}}<input id="AchSwitchInput" type="checkbox" style="align-items: center;">
-	</label>
-</div>
-<div id="achHeaderTools" class="ach-header-tools">
-	<div id="hiddenforuser"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
-	<div id="hiddenforuser2"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
-	<div id="hiddenforuser4"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
-</div>
-<head onload="onLoad()">
-	<head>
-	</head>
+<head>
 	<script id="AchievementScript" onclick="loadAchievements()">
 	
 	//ONLOAD SCRIPT
@@ -1786,6 +1774,17 @@
 		}
 	</script>
 </head>
+<body onload="onLoad()">
+<div class="OmniView" id="hiddenforuser3">
+	<label class="AchSwitch" style="display: flex;align-items: center;" onclick="toggleOmniView()">
+		{{localize 'Farchievements.Html.SeeEverything'}}<input id="AchSwitchInput" type="checkbox" style="align-items: center;">
+	</label>
+</div>
+<div id="achHeaderTools" class="ach-header-tools">
+	<div id="hiddenforuser"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
+	<div id="hiddenforuser2"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
+	<div id="hiddenforuser4"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
+</div>
 <div class="playerbackground" id="playerbackground"></div>
 <form class="{{cssClass}} flexcol" autocomplete="off">
 	<div id="CustomAchievmentStyling"></div>
@@ -1798,4 +1797,5 @@
 	<div id="achsyncnormalmode"></div>
 </form>
 <div class="window-resizable-handle"><i class="fas fa-arrows-alt-h"></i></div>
+</body>
 </html>
