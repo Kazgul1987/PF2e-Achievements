@@ -1775,20 +1775,23 @@
 	</script>
 </head>
 <body onload="onLoad()">
-<div class="OmniView" id="hiddenforuser3">
-	<label class="AchSwitch" style="display: flex;align-items: center;" onclick="toggleOmniView()">
-		{{localize 'Farchievements.Html.SeeEverything'}}<input id="AchSwitchInput" type="checkbox" style="align-items: center;">
-	</label>
-</div>
-<div id="achHeaderTools" class="ach-header-tools">
-	<div id="hiddenforuser"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
-	<div id="hiddenforuser2"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
-	<div id="hiddenforuser4"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
-</div>
 <div class="playerbackground" id="playerbackground"></div>
 <form class="{{cssClass}} flexcol" autocomplete="off">
 	<div id="CustomAchievmentStyling"></div>
 	<div id="CustomAchievmentBackgroundStyling"></div>
+	<div id="achTopControls" class="ach-top-controls">
+		<div class="ach-top-controls-spacer"></div>
+		<div class="OmniView" id="hiddenforuser3">
+			<label class="AchSwitch" style="display: flex;align-items: center;" onclick="toggleOmniView()">
+				{{localize 'Farchievements.Html.SeeEverything'}}<input id="AchSwitchInput" type="checkbox" style="align-items: center;">
+			</label>
+		</div>
+		<div id="achHeaderTools" class="ach-header-tools">
+			<div id="hiddenforuser"><i class="fas fa-cogs achievementsettings" onclick="enterEditMode()"></i></div>
+			<div id="hiddenforuser2"><i class="fas fa-file-export achievementImportExport" onclick="openImportExport()"></i></div>
+			<div id="hiddenforuser4"><i class="fas fa-list listViewSettings" onclick="toggleListMode()"></i></div>
+		</div>
+	</div>
 	<div id="AchPlayerNav" class="AchPlayerNav"></div>
 	<div id="AchievementList" onSync="loadAchievements()" class="far-grid-container" style="grid-template-rows: repeat(7, 1fr);"></div>
 	<div class="pageNav"><label id="lastPageLabel" onclick="onClickPrevPage()">Page 1</label>{{localize 'Farchievements.Html.LoadPerPage'}}:<input type="number" id="toLoadNumber" value="" onchange="ChangeLoadPerPage()"></input><label id="nextPageLabel" onclick="onClickNextPage()">Page 2</label></div>
