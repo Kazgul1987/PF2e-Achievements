@@ -4,7 +4,7 @@ const SEEN_ACHIEVEMENTS_FLAG = "seenAchievements";
 
 
 Hooks.once('init', function() {
-	const debouncedReload = debounce(() => window.location.reload(), 100);
+	const debouncedReload = foundry.utils.debounce(() => window.location.reload(), 100);
 	game.settings.register('farchievements', 'EnableAchievementPopup', {
         name: game.i18n.localize('Farchievements.Settings.EnableAchievementPopup.Text'),
         hint: game.i18n.localize('Farchievements.Settings.EnableAchievementPopup.Hint'),
