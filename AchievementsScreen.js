@@ -1,11 +1,12 @@
 const moduleId = "PF2e-Achievements";
 const modulePath = `modules/${moduleId}`;
+const settingsNamespace = "farchievements";
 const SEEN_ACHIEVEMENTS_FLAG = "seenAchievements";
 
 
 Hooks.once('init', function() {
 	const debouncedReload = foundry.utils.debounce(() => window.location.reload(), 100);
-	game.settings.register('farchievements', 'EnableAchievementPopup', {
+	game.settings.register(settingsNamespace, 'EnableAchievementPopup', {
         name: game.i18n.localize('Farchievements.Settings.EnableAchievementPopup.Text'),
         hint: game.i18n.localize('Farchievements.Settings.EnableAchievementPopup.Hint'),
         scope: 'world',
@@ -14,7 +15,7 @@ Hooks.once('init', function() {
         type: Boolean,
     });
     // New setting: Disable achievement banner
-    game.settings.register('farchievements', 'DisableAchievementBanner', {
+    game.settings.register(settingsNamespace, 'DisableAchievementBanner', {
         name: game.i18n.localize('Farchievements.Settings.DisableAchievementBanner.Text'),
         hint: game.i18n.localize('Farchievements.Settings.DisableAchievementBanner.Hint'),
         scope: 'world',
@@ -22,7 +23,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'showAchOnStartup', {
+	game.settings.register(settingsNamespace, 'showAchOnStartup', {
         name: game.i18n.localize('Farchievements.Settings.showAchOnStartup.Text'),
         hint: game.i18n.localize('Farchievements.Settings.showAchOnStartup.Hint'),
         scope: 'client',
@@ -30,7 +31,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'EnableChatBarButton', {
+	game.settings.register(settingsNamespace, 'EnableChatBarButton', {
         name: game.i18n.localize('Farchievements.Settings.EnableChatBarButton.Text'),
         hint: game.i18n.localize('Farchievements.Settings.EnableChatBarButton.Hint'),
         scope: 'world',
@@ -39,7 +40,7 @@ Hooks.once('init', function() {
         type: Boolean,
 		onChange: debouncedReload,
 	});
-	game.settings.register('farchievements', 'EnableScoreboard', {
+	game.settings.register(settingsNamespace, 'EnableScoreboard', {
         name: game.i18n.localize('Farchievements.Settings.EnableScoreboard.Text'),
         hint: game.i18n.localize('Farchievements.Settings.EnableScoreboard.Hint'),
         scope: 'world',
@@ -48,7 +49,7 @@ Hooks.once('init', function() {
         type: Boolean,
 	});
 	if (game.modules.get('confetti')?.active === true)
-	game.settings.register('farchievements', 'EnableConfettiSupport', {
+	game.settings.register(settingsNamespace, 'EnableConfettiSupport', {
         name: game.i18n.localize('Farchievements.Settings.EnableConfettiSupport.Text'),
 		hint: game.i18n.localize('Farchievements.Settings.EnableConfettiSupport.Hint'),
         scope: 'world',
@@ -56,7 +57,7 @@ Hooks.once('init', function() {
         default: true,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'EnableContextButton', {
+	game.settings.register(settingsNamespace, 'EnableContextButton', {
         name: game.i18n.localize('Farchievements.Settings.EnableContextButton.Text'),
         hint: game.i18n.localize('Farchievements.Settings.EnableContextButton.Hint'),
         scope: 'world',
@@ -64,7 +65,7 @@ Hooks.once('init', function() {
         default: true,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'OmniView', {
+	game.settings.register(settingsNamespace, 'OmniView', {
         name: game.i18n.localize('Farchievements.Settings.OmniView.Text'),
         hint: game.i18n.localize('Farchievements.Settings.OmniView.Hint'),
         scope: 'client',
@@ -72,7 +73,7 @@ Hooks.once('init', function() {
 		default: false,
 		type: Boolean,
     });
-	game.settings.register('farchievements', 'ListView', {
+	game.settings.register(settingsNamespace, 'ListView', {
         name: game.i18n.localize('Farchievements.Settings.ListView.Text'),
         hint: game.i18n.localize('Farchievements.Settings.ListView.Hint'),
         scope: 'world',
@@ -80,7 +81,7 @@ Hooks.once('init', function() {
 		default: false,
 		type: Boolean,
     });
-	game.settings.register('farchievements', 'chatMessage', {
+	game.settings.register(settingsNamespace, 'chatMessage', {
         name: game.i18n.localize('Farchievements.Settings.ChatMessage.Text'),
         hint: game.i18n.localize('Farchievements.Settings.ChatMessage.Hint'),
         scope: 'world',
@@ -88,7 +89,7 @@ Hooks.once('init', function() {
 		default: true,
 		type: Boolean,
     });
-	game.settings.register('farchievements', 'loadPerPage', {
+	game.settings.register(settingsNamespace, 'loadPerPage', {
         name: game.i18n.localize('Farchievements.Settings.loadPerPage.Text'),
         hint: game.i18n.localize('Farchievements.Settings.loadPerPage.Hint'),
         scope: 'client',
@@ -101,7 +102,7 @@ Hooks.once('init', function() {
 			step: 1
 		}
     });
-	game.settings.register('farchievements', 'currentPage', {
+	game.settings.register(settingsNamespace, 'currentPage', {
         name: game.i18n.localize('Farchievements.Settings.currentPage.Text'),
         hint: game.i18n.localize('Farchievements.Settings.currentPage.Hint'),
         scope: 'client',
@@ -109,7 +110,7 @@ Hooks.once('init', function() {
 		default: 1,
 		type: Number,
     });
-	game.settings.register('farchievements', 'collapsedGroups', {
+	game.settings.register(settingsNamespace, 'collapsedGroups', {
         name: 'Collapsed achievement groups',
         hint: 'Stores collapsed achievement group ids',
         scope: 'client',
@@ -117,7 +118,7 @@ Hooks.once('init', function() {
 		default: [],
 		type: Array,
     });
-	game.settings.register('farchievements', 'GameSettingsButton', {
+	game.settings.register(settingsNamespace, 'GameSettingsButton', {
         name: game.i18n.localize('Farchievements.Settings.GameSettingsButton.Text'),
         hint: game.i18n.localize('Farchievements.Settings.GameSettingsButton.Hint'),
         scope: 'world',
@@ -126,7 +127,7 @@ Hooks.once('init', function() {
         type: Boolean,
 		onChange: debouncedReload,
     });
-	game.settings.register('farchievements', 'AchievementWindowTitle', {
+	game.settings.register(settingsNamespace, 'AchievementWindowTitle', {
         name: game.i18n.localize('Farchievements.Settings.AchievementWindowTitle.Text'),
         hint: game.i18n.localize('Farchievements.Settings.AchievementWindowTitle.Hint'),
         scope: 'world',
@@ -134,7 +135,7 @@ Hooks.once('init', function() {
         default: 'Your Achievements',
         type: String,
     });
-	game.settings.register('farchievements', 'PlayerBackColor', {
+	game.settings.register(settingsNamespace, 'PlayerBackColor', {
         name: game.i18n.localize('Farchievements.Settings.PlayerBackColor.Text'),
         hint: game.i18n.localize('Farchievements.Settings.PlayerBackColor.Hint'),
         scope: 'world',
@@ -142,7 +143,7 @@ Hooks.once('init', function() {
         default: true,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'HideUnknown', {
+	game.settings.register(settingsNamespace, 'HideUnknown', {
         name: game.i18n.localize('Farchievements.Settings.HideUnknown.Text'),
         hint: game.i18n.localize('Farchievements.Settings.HideUnknown.Hint'),
         scope: 'world',
@@ -150,7 +151,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'UnknownName', {
+	game.settings.register(settingsNamespace, 'UnknownName', {
         name: game.i18n.localize('Farchievements.Settings.UnknownName.Text'),
         hint: game.i18n.localize('Farchievements.Settings.UnknownName.Hint'),
         scope: 'world',
@@ -158,7 +159,7 @@ Hooks.once('init', function() {
         default: 'Unknown Achievement',
         type: String,
     });
-	game.settings.register('farchievements', 'AlwaysShowName', {
+	game.settings.register(settingsNamespace, 'AlwaysShowName', {
         name: game.i18n.localize('Farchievements.Settings.AlwaysShowName.Text'),
         hint: game.i18n.localize('Farchievements.Settings.AlwaysShowName.Hint'),
         scope: 'world',
@@ -166,7 +167,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'UnknownDes', {
+	game.settings.register(settingsNamespace, 'UnknownDes', {
         name: game.i18n.localize('Farchievements.Settings.UnknownDes.Text'),
         hint: game.i18n.localize('Farchievements.Settings.UnknownDes.Hint'),
         scope: 'world',
@@ -174,7 +175,7 @@ Hooks.once('init', function() {
         default: "",
         type: String,
     });
-	game.settings.register('farchievements', 'AlwaysShowDes', {
+	game.settings.register(settingsNamespace, 'AlwaysShowDes', {
         name: game.i18n.localize('Farchievements.Settings.AlwaysShowDes.Text'),
         hint: game.i18n.localize('Farchievements.Settings.AlwaysShowDes.Hint'),
         scope: 'world',
@@ -182,7 +183,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'DescriptionOnHover', {
+	game.settings.register(settingsNamespace, 'DescriptionOnHover', {
         name: game.i18n.localize('Farchievements.Settings.DescriptionOnHover.Text'),
         hint: game.i18n.localize('Farchievements.Settings.DescriptionOnHover.Hint'),
         scope: 'world',
@@ -190,7 +191,7 @@ Hooks.once('init', function() {
         default: true,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'achamount', {
+	game.settings.register(settingsNamespace, 'achamount', {
         name: game.i18n.localize('Farchievements.Settings.achamount.Text'),
         hint: game.i18n.localize('Farchievements.Settings.achamount.Hint'),
         scope: 'world',
@@ -198,7 +199,7 @@ Hooks.once('init', function() {
         default: "3",
         type: String,
     });
-	game.settings.register('farchievements', 'standarticon', {
+	game.settings.register(settingsNamespace, 'standarticon', {
         name: game.i18n.localize('Farchievements.Settings.standarticon.Text'),
         hint: game.i18n.localize('Farchievements.Settings.standarticon.Hint'),
         scope: 'world',
@@ -207,7 +208,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'image',
     });	
-	game.settings.register('farchievements', 'standardBackground', {
+	game.settings.register(settingsNamespace, 'standardBackground', {
         name: game.i18n.localize('Farchievements.Settings.standardBackground.Text'),
         hint: game.i18n.localize('Farchievements.Settings.standardBackground.Hint'),
         scope: 'world',
@@ -216,7 +217,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'image',
     });
-	game.settings.register('farchievements', 'bannerBackground', {
+	game.settings.register(settingsNamespace, 'bannerBackground', {
         name: game.i18n.localize('Farchievements.Settings.bannerBackground.Text'),
         hint: game.i18n.localize('Farchievements.Settings.bannerBackground.Hint'),
         scope: 'world',
@@ -225,7 +226,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'image',
     });
-	game.settings.register('farchievements', 'bannerAnimation', {
+	game.settings.register(settingsNamespace, 'bannerAnimation', {
         name: game.i18n.localize('Farchievements.Settings.bannerAnimation.Text'),
         hint: game.i18n.localize('Farchievements.Settings.bannerAnimation.Hint'),
         scope: 'world',
@@ -237,7 +238,7 @@ Hooks.once('init', function() {
 			"fadeOut": "fade out (SFX: sound)",
 		},
     });
-	game.settings.register('farchievements', 'achievementStinger', {
+	game.settings.register(settingsNamespace, 'achievementStinger', {
         name: game.i18n.localize('Farchievements.Settings.achievementStinger.Text'),
 		hint: game.i18n.localize('Farchievements.Settings.achievementStinger.Hint'),
         scope: 'world',
@@ -246,7 +247,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'audio',
 	});
-	game.settings.register('farchievements', 'achievementSound', {
+	game.settings.register(settingsNamespace, 'achievementSound', {
         name: game.i18n.localize('Farchievements.Settings.achievementSound.Text'),
 		hint: game.i18n.localize('Farchievements.Settings.achievementSound.Hint'),
         scope: 'world',
@@ -255,7 +256,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'audio',
 	});
-	game.settings.register('farchievements', 'achievementStingerVolume', {
+	game.settings.register(settingsNamespace, 'achievementStingerVolume', {
         name: game.i18n.localize('Farchievements.Settings.achievementStingerVolume.Text'),
         hint: game.i18n.localize('Farchievements.Settings.achievementStingerVolume.Hint'),
         scope: 'world',
@@ -268,7 +269,7 @@ Hooks.once('init', function() {
 			step: 0.01
 		}
     });
-	game.settings.register('farchievements', 'achievementSoundVolume', {
+	game.settings.register(settingsNamespace, 'achievementSoundVolume', {
         name: game.i18n.localize('Farchievements.Settings.achievementSoundVolume.Text'),
         hint: game.i18n.localize('Farchievements.Settings.achievementSoundVolume.Hint'),
         scope: 'world',
@@ -281,7 +282,7 @@ Hooks.once('init', function() {
 			step: 0.01
 		}
     });
-	game.settings.register('farchievements', 'achpretext', {
+	game.settings.register(settingsNamespace, 'achpretext', {
         name: game.i18n.localize('Farchievements.Settings.achpretext.Text'),
         hint: game.i18n.localize('Farchievements.Settings.achpretext.Hint'),
         scope: 'world',
@@ -289,7 +290,7 @@ Hooks.once('init', function() {
         default: "Achievement Gained: ",
         type: String,
     });
-	game.settings.register('farchievements', 'greyscale', {
+	game.settings.register(settingsNamespace, 'greyscale', {
         name: game.i18n.localize('Farchievements.Settings.greyscale.Text'),
         hint: game.i18n.localize('Farchievements.Settings.greyscale.Hint'),
         scope: 'world',
@@ -297,7 +298,7 @@ Hooks.once('init', function() {
         default: false,
         type: Boolean,
     });
-	game.settings.register('farchievements', 'mystery', {
+	game.settings.register(settingsNamespace, 'mystery', {
         name: game.i18n.localize('Farchievements.Settings.mystery.Text'),
         hint: game.i18n.localize('Farchievements.Settings.mystery.Hint'),
         scope: 'world',
@@ -306,7 +307,7 @@ Hooks.once('init', function() {
 		type: String,
 		filePicker: 'image',
     });
-	game.settings.register('farchievements', 'achievementdata', {
+	game.settings.register(settingsNamespace, 'achievementdata', {
         name: game.i18n.localize('Farchievements.Settings.AchievementData.Text'),
         hint: game.i18n.localize('Farchievements.Settings.AchievementData.Hint'),
         scope: 'world',
@@ -314,7 +315,7 @@ Hooks.once('init', function() {
 		default: "1:::Mounted////icons/sundries/misc/horseshoe-iron.webp////Acquire a mount.;;;2:::Translator////icons/sundries/scrolls/scroll-bound-blue-white.webp////Act as the party translator.;;;3:::Argumenter////icons/commodities/bones/beak-orange-green.webp////Argue with the DM over a dice roll.;;;4:::Bitte, Bitte Papa////icons/sundries/lights/candle-pillar-lit-yellow.webp////Ask a deity for a favor.;;;5:::Hardmode////icons/skills/wounds/injury-eyes-blood-red-pink.webp////Be deaf and blind simultaneously.;;;6:::You have no power here////icons/skills/wounds/injury-eyes-blood-red-pink.webp////Be ignored by the DM when citing rules.;;;7:::Special////icons/magic/unholy/silhouette-light-fire-blue.webp////Be the only person to roll 20 at a session;;;8:::Actor////icons/environment/people/spearfighter.webp////Beat a performance check while in disguise;;;9:::Deiety////icons/magic/holy/barrier-shield-winged-blue.webp////Become deified.;;;10:::Brute////icons/magic/earth/barrier-stone-brown-green.webp////Burst through a wall.;;;11:::Ouch////icons/skills/wounds/bone-broken-marrow-red.webp////Reach 0 HP twice in 1 encounter.;;;12:::Amazing Roleplayer////icons/skills/social/diplomacy-peace-alliance.webp////Roleplay your character exceptionally.;;;13:::(Un)advantage////icons/magic/control/voodoo-doll-pain-damage-purple.webp////Roll 2 1’s on an advantaged roll.;;;14:::Lucky////icons/magic/light/projectile-flare-blue.webp////Roll 2 20’s in a row.;;;15:::Never tell me the odds////icons/magic/control/buff-luck-fortune-clover-green.webp////Roll 2 20’s on a disadvantaged roll.;;;16:::Strongest in the Land////icons/skills/melee/unarmed-punch-fist.webp////Have a strength score over 20.;;;17:::Fastest in the Land////icons/magic/lightning/bolt-strike-cloud-gray.webp////Have a dexterity score over 20.;;;18:::Toughest in the Land////icons/magic/earth/strike-fist-stone-light.webp////Have a constitution score over 20.;;;19:::Smartest in the Land////icons/magic/control/silhouette-hold-beam-blue.webp////Have a intelligence score over 20.;;;20:::Wisest in the Land////icons/magic/nature/tree-elm-roots-brown.webp////Have a wisdom score over 20.;;;21:::The most Charming in the Land////icons/magic/unholy/strike-body-explode-disintegrate.webp////Have a charisma score over 20.;;;22:::I have nothing left to lose...////icons/magic/death/undead-skeleton-deformed-red.webp////...so the only path to choose is twisted. Be the sole survivor of a TPK;;;23:::Necromancer////icons/commodities/bones/bones-dragon-grey.webp////Raise the dead.;;;24:::Lorax////https://c.tenor.com/BzpCcZbxOAIAAAAd/lorax-the-lorax.gif////Speak for the trees;;;",
         type: String,
     });
-	game.settings.register('farchievements', 'achievementdataNEW', {
+	game.settings.register(settingsNamespace, 'achievementdataNEW', {
         name: game.i18n.localize('Farchievements.Settings.achievementdataNEW.Text'),
         hint: game.i18n.localize('Farchievements.Settings.achievementdataNEW.Hint'),
         scope: 'world',
@@ -322,7 +323,7 @@ Hooks.once('init', function() {
 		default: '',
         type: String,
     });
-	game.settings.register('farchievements', 'clientdataSYNC', {
+	game.settings.register(settingsNamespace, 'clientdataSYNC', {
         name: game.i18n.localize('Farchievements.Settings.ClientDataList.Text'),
         hint: game.i18n.localize('Farchievements.Settings.ClientDataList.Hint'),
         scope: 'world',
@@ -330,7 +331,7 @@ Hooks.once('init', function() {
         default: "",
         type: String,
     });
-	game.settings.register('farchievements', 'clientdata', {
+	game.settings.register(settingsNamespace, 'clientdata', {
         name: game.i18n.localize('Farchievements.Settings.ClientData.Text'),
         hint: game.i18n.localize('Farchievements.Settings.ClientData.Hint'),
         scope: 'client',
@@ -338,7 +339,7 @@ Hooks.once('init', function() {
         default: "",
         type: String,
     });
-	game.settings.register('farchievements', 'loadSettingsForPlayer', {
+	game.settings.register(settingsNamespace, 'loadSettingsForPlayer', {
         name: game.i18n.localize('Farchievements.Settings.loadSettingsForPlayer.Text'),
         hint: game.i18n.localize('Farchievements.Settings.loadSettingsForPlayer.Hint'),
         scope: 'client',
@@ -346,7 +347,7 @@ Hooks.once('init', function() {
         default: "",
         type: String,
     });
-	game.settings.register('farchievements', 'lastSearchTerm', {
+	game.settings.register(settingsNamespace, 'lastSearchTerm', {
 		name: 'Farchievements.Settings.lastSearchTerm.Text',
 		hint: 'this will hold the last searched term for the search functionality, this will reset when the screen is opened',
 		scope: 'client',
@@ -355,7 +356,7 @@ Hooks.once('init', function() {
 		type: String,
 	});
 	
-	game.settings.register('farchievements', 'lastSortType', {
+	game.settings.register(settingsNamespace, 'lastSortType', {
 		name: 'Farchievements.Settings.lastSortType.Text',
 		hint: 'this will hold the sort type for the sort functionality',
 		scope: 'client',
@@ -363,7 +364,7 @@ Hooks.once('init', function() {
 		default: "nameAsc",
 		type: String,
 	});	
-	game.settings.register('farchievements', 'activeTab', {
+	game.settings.register(settingsNamespace, 'activeTab', {
 		name: 'Farchievements.Settings.activeTab.Text',
 		hint: 'this will hold the active tab for the achievement view',
 		scope: 'client',
@@ -377,7 +378,7 @@ Hooks.once('init', function() {
 class Achievements {
     static addChatControl() {
 		if(game.version < 13){
-			if(!game.settings.get('farchievements', 'EnableChatBarButton'))
+			if(!game.settings.get(settingsNamespace, 'EnableChatBarButton'))
 				return;
 			let chatControlLeft = document.getElementsByClassName("chat-control-icon")[0];
 			let tableNode = document.getElementById("achievements-button");
@@ -455,7 +456,7 @@ class AchievementsScreen extends Application {
 		dialogOptions.resizable = true;
         renderTemplate(path, data).then(dlg => {
             new Dialog({
-                title: game.settings.get('farchievements', 'AchievementWindowTitle'),
+                title: game.settings.get(settingsNamespace, 'AchievementWindowTitle'),
                 content: dlg,
                 buttons: {}
             }, dialogOptions).render(true);
@@ -471,7 +472,7 @@ class AchievementSync{
 		let seen = await game.user.getFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG);
 		if (Array.isArray(seen)) return seen;
 		// One-time migration from legacy client setting (string)
-		const legacy = game.settings.get('farchievements', 'clientdata');
+		const legacy = game.settings.get(settingsNamespace, 'clientdata');
 		if (typeof legacy === 'string' && legacy.length) {
 			seen = legacy.split('||||%%%||||').filter(Boolean);
 			await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, seen);
@@ -488,7 +489,7 @@ class AchievementSync{
 		await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, merged);
 		// Keep legacy client setting roughly in sync for backwards compatibility
 		try {
-			await game.settings.set('farchievements', 'clientdata', merged.join('||||%%%||||') + '||||%%%||||');
+			await game.settings.set(settingsNamespace, 'clientdata', merged.join('||||%%%||||') + '||||%%%||||');
 		} catch (err) { /* ignore */ }
 	}
 	static async PlayAnimation(achievementsGainedList) {
@@ -496,11 +497,11 @@ class AchievementSync{
 		const achievementsToMark = achievementsGainedList.split("||||%%%||||").filter(Boolean);
 		await AchievementSync._markSeen(achievementsToMark);
 		
-		let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+		let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
 		let achievementsToGain = achievementsGainedList.split("||||%%%||||");
 	
-		let showPopup = game.settings.get('farchievements', 'EnableAchievementPopup');
-		let disableBanner = game.settings.get('farchievements', 'DisableAchievementBanner');
+		let showPopup = game.settings.get(settingsNamespace, 'EnableAchievementPopup');
+		let disableBanner = game.settings.get(settingsNamespace, 'DisableAchievementBanner');
 		
 		for (let i = 0; i < achievementsToGain.length; i++) {
 			await AchievementSync.sleep(100);
@@ -520,11 +521,11 @@ class AchievementSync{
 	
 			// Banner animation logic
 			let name = AchievementToGain.name;
-			let icon = AchievementToGain.image || game.settings.get('farchievements', 'standarticon');
-			let anim = game.settings.get('farchievements', 'bannerAnimation');
+			let icon = AchievementToGain.image || game.settings.get(settingsNamespace, 'standarticon');
+			let anim = game.settings.get(settingsNamespace, 'bannerAnimation');
 			let dur = (anim == "fadeOut") ? 5 : 13;
 	
-			document.getElementsByClassName("AchievementText")[0].innerHTML = `<label class="AchievementTextLabel">${game.settings.get("farchievements", "achpretext")}</label>` + name;
+			document.getElementsByClassName("AchievementText")[0].innerHTML = `<label class="AchievementTextLabel">${game.settings.get(settingsNamespace, "achpretext")}</label>` + name;
 			document.getElementById("AchievementIMG").src = icon;
 	
 			if (AchievementToGain.glowing)
@@ -537,12 +538,12 @@ class AchievementSync{
 			
 			let sound = (anim == "fadeOut") ? 'achievementSound' : 'achievementStinger';
 			let volume = (anim == "fadeOut") ? 'achievementSoundVolume' : 'achievementStingerVolume';
-			await AudioHelper.play({ src: game.settings.get('farchievements', sound), volume: game.settings.get('farchievements', volume), autoplay: true, loop: false }, false);
+			await AudioHelper.play({ src: game.settings.get(settingsNamespace, sound), volume: game.settings.get(settingsNamespace, volume), autoplay: true, loop: false }, false);
 	
 			if (anim == "slidein") await AchievementSync.sleep(1800);
 			document.getElementById("Achievementbar").style.setProperty("display", "flex");
 	
-			if (game.modules.get('confetti')?.active === true && game.settings.get('farchievements', 'EnableConfettiSupport')) {
+			if (game.modules.get('confetti')?.active === true && game.settings.get(settingsNamespace, 'EnableConfettiSupport')) {
 				for (let c = 0; c < 3; c++) {
 					await AchievementSync.sleep(500);
 					const strength = window.confetti.confettiStrength.high;
@@ -567,7 +568,7 @@ class AchievementSync{
 		}
 		else{//IF USER IS PLAYER
 			//FOR EACH ACHIEVEMENT IF NOT IN CLIENTDATA PLAY ANIMATION AND ADD IT
-			let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
 			let existingAchievements = await AchievementSync._getSeen();
 			let AchievementsToPlay = "";
 			
@@ -621,7 +622,7 @@ class AchievementSync{
 Hooks.on('renderSceneNavigation', async function() {
         Achievements.addChatControl();
         //console.log("AchievementsScreen GM true");
-		let style = await game.settings.get("farchievements", "bannerBackground");
+		let style = await game.settings.get(settingsNamespace, "bannerBackground");
 		let banner = "";
 		
 		if(style != "")
@@ -645,7 +646,7 @@ Hooks.on('createChatMessage', (chatMessage) => {
 
         console.log(`Farchievements | Roll detected in chat message for user: ${userId}, roll total: ${rolledValue}`);
 
-        let achievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+        let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
         console.log(`Farchievements | Loaded achievement list:`, achievementList);
 
         // Filter for achievements that have a progressType of 'dice' or 'diceChain'
@@ -775,7 +776,7 @@ Hooks.on('createChatMessage', (chatMessage) => {
 
                 // Update the achievement list in game settings
                 let updatedAchievementList = achievementList.map(a => (a.name === achievement.name ? achievement : a));
-                game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(updatedAchievementList));
+                game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(updatedAchievementList));
             }
         });
 
@@ -788,18 +789,18 @@ Hooks.on('createChatMessage', (chatMessage) => {
 
 Hooks.on('ready', async function() {
 	//START MIGRATION
-	if(game.user.isGM && game.settings.get('farchievements', 'achievementdataNEW') == ""){
+	if(game.user.isGM && game.settings.get(settingsNamespace, 'achievementdataNEW') == ""){
 		Farchievements.MigrateAchievements();
 	}
 	//sync achievements
 	if(!game.user.isGM)
-		AchievementSync.SyncAchievements(game.settings.get('farchievements', 'showAchOnStartup'), true);
+		AchievementSync.SyncAchievements(game.settings.get(settingsNamespace, 'showAchOnStartup'), true);
 });
 Hooks.on('renderSettings', function() {
 	//ADD BUTTON TO SETTINGS
 	function refreshData(){
 		let x = 0.1;  // 0.1 seconds
-		if(document.getElementById("FarchievementsSettings") == null && game.settings.get('farchievements', 'GameSettingsButton')){
+		if(document.getElementById("FarchievementsSettings") == null && game.settings.get(settingsNamespace, 'GameSettingsButton')){
 			$('#settings-game').append(`<div id="FarchievementsSettings" style="margin:0;"><h4>Farchievements</h4><button id="SettingsAchievementsButton" data-action="Achievements"><i class="fas fa-medal achievements-button"></i>${game.i18n.localize('Farchievements.Achievements')}</button></div>`);
 			let AchievementsButton = document.getElementById("SettingsAchievementsButton");
 			if(AchievementsButton != null)
@@ -814,7 +815,7 @@ Hooks.on('renderSettings', function() {
 					if(id != game.user.id && game.user.isGM){//You can't open your own achievements
 						$(".context-items").append(`<li class="context-item" id="contextAchievement"><i class="fas fa-medal"></i> ${game.i18n.localize('Farchievements.ViewAchievements')}</li>`);
 						let AchievmentContextButton = document.getElementById("contextAchievement");
-						game.settings.set('farchievements', 'loadSettingsForPlayer', id);
+						game.settings.set(settingsNamespace, 'loadSettingsForPlayer', id);
 						AchievmentContextButton.onclick = Achievements.initializeAchievements;
 					}
 				}
@@ -849,8 +850,8 @@ if(message.content.includes("Farchievements-SyncRequest")){
 	let NAME = message.content.split("|")[1];
 	let ACHIEVMENTNAME = message.content.split("|")[2];
 	//==========================================
-	let achData = game.settings.get('farchievements', 'achievementdata').split(';;;');
-	let dataArray = game.settings.get('farchievements', 'clientdataSYNC').split("||");
+	let achData = game.settings.get(settingsNamespace, 'achievementdata').split(';;;');
+	let dataArray = game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
 	let Player, achievementID, dataArrayPlayer, toSYNC, PID;
 	if(NAME != "")
 	Player = game.users.getName(NAME);
@@ -868,7 +869,7 @@ if(message.content.includes("Farchievements-SyncRequest")){
 				dataArray[PID] = dataArrayPlayer;
 				toSYNC = dataArray.join("||");
 				console.log(toSYNC);
-				//await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+				//await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 
 				console.log("Setting Achievement: " + achievementname + "(ID:"+ achievementID + ")" + " for user: " + playerName);
 				return;
@@ -879,7 +880,7 @@ if(message.content.includes("Farchievements-SyncRequest")){
 		toSYNC = dataArray.join("||");
 		console.log(toSYNC);
 	}
-	await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+	await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 
 	ChatMessage.create({
 		user : game.user.id,
@@ -892,10 +893,10 @@ if(message.content.includes("Farchievements-SyncRequest")){
 }});
 window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
 	if(!game.user.isGM) return;
-	await game.settings.set('farchievements', 'achievementdata', "1:::Mounted////systems/dnd5e/icons/items/inventory/horseshoe.jpg////Acquire a mount.;;;2:::Translator////systems/dnd5e/icons/items/inventory/note-scroll.jpg////Act as the party translator.;;;3:::Argumenter////systems/dnd5e/icons/items/inventory/monster-beak.jpg////Argue with the DM over a dice roll.;;;4:::Bitte, Bitte Papa////systems/dnd5e/icons/items/inventory/runestone-dwarven.jpg////Ask a deity for a favor.;;;5:::Hardmode////icons/skills/wounds/injury-eyes-blood-red-pink.webp////Be deaf and blind simultaneously.;;;6:::You have no power here////systems/dnd5e/icons/skills/blood_12.jpg////Be ignored by the DM when citing rules.;;;7:::Special////systems/dnd5e/icons/skills/green_27.jpg////Be the only person to roll 20 at a session;;;8:::Actor////systems/dnd5e/icons/skills/emerald_07.jpg////Beat a performance check while in disguise;;;9:::Deiety////systems/dnd5e/icons/skills/yellow_13.jpg////Become deified.;;;10:::Brute////icons/magic/earth/barrier-stone-brown-green.webp////Burst through a wall.;;;11:::Ouch////https://assets.forge-vtt.com/5fa2d7054f8a4cf1b34c8a38/Icons/spellbook_page1/SpellBook08_13.png////Reach 0 HP twice in 1 encounter.;;;12:::Amazing Roleplayer////icons/skills/social/diplomacy-peace-alliance.webp////Roleplay your character exceptionally.;;;13:::(Un)advantage////icons/magic/control/voodoo-doll-pain-damage-purple.webp////Roll 2 1’s on an advantaged roll.;;;14:::Lucky////icons/magic/light/projectile-flare-blue.webp////Roll 2 20’s in a row.;;;15:::Never tell me the odds////icons/magic/control/buff-luck-fortune-clover-green.webp////Roll 2 20’s on a disadvantaged roll.;;;16:::Strongest in the Land////icons/skills/melee/unarmed-punch-fist.webp////Have a strength score over 20.;;;17:::Fastest in the Land////icons/magic/lightning/bolt-strike-cloud-gray.webp////Have a dexterity score over 20.;;;18:::Toughest in the Land////icons/magic/earth/strike-fist-stone-light.webp////Have a constitution score over 20.;;;19:::Smartest in the Land////icons/magic/control/silhouette-hold-beam-blue.webp////Have a intelligence score over 20.;;;20:::Wisest in the Land////icons/magic/nature/tree-elm-roots-brown.webp////Have a wisdom score over 20.;;;21:::The most Charming in the Land////icons/magic/unholy/strike-body-explode-disintegrate.webp////Have a charisma score over 20.;;;22:::I've nothing left to lose...////icons/magic/death/undead-skeleton-deformed-red.webp////...so the only path to choose is twisted. Be the sole survivor of a TPK;;;23:::Necromancer////icons/commodities/bones/bones-dragon-grey.webp////Raise the dead.;;;24:::Lorax////https://c.tenor.com/BzpCcZbxOAIAAAAd/lorax-the-lorax.gif////Speak for the trees;;;");
-	await game.settings.set('farchievements', 'achievementdataNEW',"");
-	await game.settings.set('farchievements', 'clientdataSYNC',"");
-	await game.settings.set('farchievements', 'clientdata', "");
+	await game.settings.set(settingsNamespace, 'achievementdata', "1:::Mounted////systems/dnd5e/icons/items/inventory/horseshoe.jpg////Acquire a mount.;;;2:::Translator////systems/dnd5e/icons/items/inventory/note-scroll.jpg////Act as the party translator.;;;3:::Argumenter////systems/dnd5e/icons/items/inventory/monster-beak.jpg////Argue with the DM over a dice roll.;;;4:::Bitte, Bitte Papa////systems/dnd5e/icons/items/inventory/runestone-dwarven.jpg////Ask a deity for a favor.;;;5:::Hardmode////icons/skills/wounds/injury-eyes-blood-red-pink.webp////Be deaf and blind simultaneously.;;;6:::You have no power here////systems/dnd5e/icons/skills/blood_12.jpg////Be ignored by the DM when citing rules.;;;7:::Special////systems/dnd5e/icons/skills/green_27.jpg////Be the only person to roll 20 at a session;;;8:::Actor////systems/dnd5e/icons/skills/emerald_07.jpg////Beat a performance check while in disguise;;;9:::Deiety////systems/dnd5e/icons/skills/yellow_13.jpg////Become deified.;;;10:::Brute////icons/magic/earth/barrier-stone-brown-green.webp////Burst through a wall.;;;11:::Ouch////https://assets.forge-vtt.com/5fa2d7054f8a4cf1b34c8a38/Icons/spellbook_page1/SpellBook08_13.png////Reach 0 HP twice in 1 encounter.;;;12:::Amazing Roleplayer////icons/skills/social/diplomacy-peace-alliance.webp////Roleplay your character exceptionally.;;;13:::(Un)advantage////icons/magic/control/voodoo-doll-pain-damage-purple.webp////Roll 2 1’s on an advantaged roll.;;;14:::Lucky////icons/magic/light/projectile-flare-blue.webp////Roll 2 20’s in a row.;;;15:::Never tell me the odds////icons/magic/control/buff-luck-fortune-clover-green.webp////Roll 2 20’s on a disadvantaged roll.;;;16:::Strongest in the Land////icons/skills/melee/unarmed-punch-fist.webp////Have a strength score over 20.;;;17:::Fastest in the Land////icons/magic/lightning/bolt-strike-cloud-gray.webp////Have a dexterity score over 20.;;;18:::Toughest in the Land////icons/magic/earth/strike-fist-stone-light.webp////Have a constitution score over 20.;;;19:::Smartest in the Land////icons/magic/control/silhouette-hold-beam-blue.webp////Have a intelligence score over 20.;;;20:::Wisest in the Land////icons/magic/nature/tree-elm-roots-brown.webp////Have a wisdom score over 20.;;;21:::The most Charming in the Land////icons/magic/unholy/strike-body-explode-disintegrate.webp////Have a charisma score over 20.;;;22:::I've nothing left to lose...////icons/magic/death/undead-skeleton-deformed-red.webp////...so the only path to choose is twisted. Be the sole survivor of a TPK;;;23:::Necromancer////icons/commodities/bones/bones-dragon-grey.webp////Raise the dead.;;;24:::Lorax////https://c.tenor.com/BzpCcZbxOAIAAAAd/lorax-the-lorax.gif////Speak for the trees;;;");
+	await game.settings.set(settingsNamespace, 'achievementdataNEW',"");
+	await game.settings.set(settingsNamespace, 'clientdataSYNC',"");
+	await game.settings.set(settingsNamespace, 'clientdata', "");
 	// Also clear per-user "seen" flags
 	for (const u of game.users.contents) {
 		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
@@ -903,8 +904,8 @@ window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
 }
 window.farchievements_DEBUG_Reset_PlayerAchievements = async function resetPlayers(){
 	if(!game.user.isGM) return;
-	await game.settings.set('farchievements', 'clientdataSYNC',"");
-	await game.settings.set('farchievements', 'clientdata', "");
+	await game.settings.set(settingsNamespace, 'clientdataSYNC',"");
+	await game.settings.set(settingsNamespace, 'clientdata', "");
 	// Also clear per-user \"seen\" flags
 	for (const u of game.users.contents) {
 		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
@@ -922,11 +923,11 @@ window.Farchievements = class Farchievement{
 	static async AddAchievement(AchievementName, PlayerName){
 		if(!game.user.isGM) return;
 		console.log(AchievementName);
-		let data = game.settings.get('farchievements', 'achievementdata').split(';;;');
+		let data = game.settings.get(settingsNamespace, 'achievementdata').split(';;;');
 		let AchievementID, PlayerID;
-		for(let i = 0; i < game.settings.get('farchievements', 'achievementdata').split(';;;').length; i++){
-			if(AchievementName == game.settings.get('farchievements', 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[1]){
-				AchievementID = game.settings.get('farchievements', 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[0] - 1;
+		for(let i = 0; i < game.settings.get(settingsNamespace, 'achievementdata').split(';;;').length; i++){
+			if(AchievementName == game.settings.get(settingsNamespace, 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[1]){
+				AchievementID = game.settings.get(settingsNamespace, 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[0] - 1;
 			}
 		}
 		PlayerID = game.users.getName(PlayerName).id;
@@ -944,7 +945,7 @@ window.Farchievements = class Farchievement{
 	static async RemoveAchievement(AchievementName, PlayerName) {
 		if (!game.user.isGM) return;
 	
-		let achievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW')); // Get the achievement list
+		let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW')); // Get the achievement list
 		let AchievementToRemove = achievementList.find(ach => ach.name === AchievementName); // Find the specific achievement
 		let PlayerID = game.users.getName(PlayerName).id; // Get the player ID
 	
@@ -962,17 +963,17 @@ window.Farchievements = class Farchievement{
 		AchievementToRemove.removePlayer(PlayerID);
 	
 		// Save the updated achievement list back to the settings
-		game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(achievementList));
+		game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementList));
 	
 		ui.notifications.notify(`Achievement "${AchievementName}" removed from player "${PlayerName}".`);
 	}	
 	static async MigrateAchievements(){
 		await ui.notifications.notify("Farchievements | Beginning migration of old data...");
-		//console.log(game.settings.get('farchievements', 'achievementdataNEW'));
-		await game.settings.set('farchievements', 'currentPage', 1);
-		let oldData = game.settings.get('farchievements', 'achievementdata');
+		//console.log(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+		await game.settings.set(settingsNamespace, 'currentPage', 1);
+		let oldData = game.settings.get(settingsNamespace, 'achievementdata');
 		let oldDataArr = oldData.split(";;;");
-		let oldClientData = game.settings.get('farchievements', 'clientdataSYNC');
+		let oldClientData = game.settings.get(settingsNamespace, 'clientdataSYNC');
 		let oldClientDataArr = oldClientData.split("||");
 		let newData = "";
 		let AchievementList = [];
@@ -1021,20 +1022,20 @@ window.Farchievements = class Farchievement{
 			//console.log(newAch);
 			AchievementList.push(newAch);
 		}
-		//console.log(game.settings.get('farchievements', 'achievementdataNEW'));
+		//console.log(game.settings.get(settingsNamespace, 'achievementdataNEW'));
 		let data = JSON.stringify(AchievementList);
 		//console.log(data);
 		//let TestData = JSON.parse(data);
-		game.settings.set('farchievements', 'achievementdataNEW', data);
+		game.settings.set(settingsNamespace, 'achievementdataNEW', data);
 		await ui.notifications.notify("Farchievements | Migration Finished");
 
 	}
 	static async debugAchievements(){
-		return JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+		return JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
 	}
 }
 window.Farchievements.DisplayAchievementPopup = function (achievementName, playerId = "") {
-    let achievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+    let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
     let achievement = achievementList.find(ach => ach.name === achievementName);
     
     if (!achievement) {
@@ -1123,7 +1124,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                     title: game.i18n.localize('Farchievements.Dialog.UnlockForAllTitle'),
                     content: game.i18n.format('Farchievements.Dialog.UnlockForAllContent', { achievement: achievement.name }),
                     yes: async () => {
-                        let updatedList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+                        let updatedList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
                         let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
 
                         if (!updatedAchievement) {
@@ -1155,7 +1156,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                         targetUsers.forEach(user => achievementInstance.addPlayer(user.id));
 
                         let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
-                        await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(finalList));
+                        await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(finalList));
                         SendSyncMessage();
                         ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForAll'));
                     }
@@ -1200,7 +1201,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                                     return;
                                 }
 
-                                let updatedList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+                                let updatedList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
                                 let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
 
                                 if (!updatedAchievement) {
@@ -1231,7 +1232,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                                 selectedIds.forEach(userId => achievementInstance.addPlayer(userId));
 
                                 let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
-                                await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(finalList));
+                                await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(finalList));
                                 SendSyncMessage();
                                 ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForPlayers'));
                             }
@@ -1258,7 +1259,7 @@ async function addAchievementFromCommand(achievementID, PID) {
 			let dataPlayerID = cleanPlayerID; //++xathick
 			let player = game.users.get(PID);
 			let playerName = player.name;
-			let clientdataSYNC = game.settings.get('farchievements', 'clientdataSYNC'); //GET DATA
+			let clientdataSYNC = game.settings.get(settingsNamespace, 'clientdataSYNC'); //GET DATA
 			let dataArray = clientdataSYNC.split("||"); //DATA TO ARRAY
 			let dataArrayPlayer; //DATA TO ARRAY
 			let toSYNC;
@@ -1267,16 +1268,16 @@ async function addAchievementFromCommand(achievementID, PID) {
 				if (dataArray[index].split(":")[0] == PID) {
 					dataPlayerID = index;
 				}
-				game.settings.get('farchievements', 'clientdataSYNC').split("||");
+				game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
 			}
 			if (dataArray[dataPlayerID] == "" || dataArray[dataPlayerID] == 'NULL') { // IF NO DATA YET ADD ACHIEVEMENT
 				dataArrayPlayer = game.users.contents[dataPlayerID]._id + ":" + achievementID + ",";
 				dataArray[dataPlayerID] = dataArrayPlayer; //++xathick
 				toSYNC = dataArray.join("||");
-				await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+				await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 				if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
 				{
-					await game.settings.set('farchievements', 'loadSettingsForPlayer', PID);
+					await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
 					$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
 					loadAchievements();
 				}
@@ -1316,13 +1317,13 @@ async function addAchievementFromCommand(achievementID, PID) {
 				document.getElementById('SyncAch').id = "SyncAchUnsaved";
 			}
 
-			await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+			await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 			SendSyncMessage();
 			//RELOAD ANY OPEN WINDOW
 			if(document.getElementById('AchPlayerNav') == null) return;
 			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
 			{
-				await game.settings.set('farchievements', 'loadSettingsForPlayer', PID);
+				await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
 				$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
 				window.loadAchievements();
 			}
@@ -1334,7 +1335,7 @@ async function removeAchievementFromCommand(achievementID, PID) {
 			let dataPlayerID = cleanPlayerID; //++xathick
 			let player = game.users.get(PID);
 			let playerName = player.name;
-			let clientdataSYNC = game.settings.get('farchievements', 'clientdataSYNC'); //GET DATA
+			let clientdataSYNC = game.settings.get(settingsNamespace, 'clientdataSYNC'); //GET DATA
 			let dataArray = clientdataSYNC.split("||"); //DATA TO ARRAY
 			let dataArrayPlayer; //DATA TO ARRAY
 			let toSYNC;
@@ -1343,16 +1344,16 @@ async function removeAchievementFromCommand(achievementID, PID) {
 				if (dataArray[index].split(":")[0] == PID) {
 					dataPlayerID = index;
 				}
-				game.settings.get('farchievements', 'clientdataSYNC').split("||");
+				game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
 			}
 			if (dataArray[dataPlayerID] == "" || dataArray[dataPlayerID] == 'NULL') { // IF NO DATA YET ADD ACHIEVEMENT
 				dataArrayPlayer = game.users.contents[dataPlayerID]._id + ":" + achievementID + ",";
 				dataArray[dataPlayerID] = dataArrayPlayer; //++xathick
 				toSYNC = dataArray.join("||");
-				await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+				await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 				if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
 				{
-					await game.settings.set('farchievements', 'loadSettingsForPlayer', PID);
+					await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
 					$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
 					loadAchievements();
 				}
@@ -1395,13 +1396,13 @@ async function removeAchievementFromCommand(achievementID, PID) {
 				document.getElementById('SyncAch').id = "SyncAchUnsaved";
 			}
 
-			await game.settings.set('farchievements', 'clientdataSYNC', toSYNC);
+			await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
 			SendSyncMessage();
 			//RELOAD ANY OPEN WINDOW
 			if(document.getElementById('AchPlayerNav') == null) return;
 			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
 			{
-				await game.settings.set('farchievements', 'loadSettingsForPlayer', PID);
+				await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
 				$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
 				window.loadAchievements();
 			}
@@ -1409,8 +1410,8 @@ async function removeAchievementFromCommand(achievementID, PID) {
 				window.loadAchievementsEditMode();
 }
 async function displayMyNewAchievementInChat(newAchievements){
-	if(!game.settings.get('farchievements', 'chatMessage')) return;
-	let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+	if(!game.settings.get(settingsNamespace, 'chatMessage')) return;
+	let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
 	if (!Array.isArray(newAchievements)) {
 		if(newAchievements != ""){
 			if (newAchievements === "" || newAchievements === " ") return; // Skip empty or space strings
@@ -1449,7 +1450,7 @@ Hooks.once('ready', () => {
 	if(game.version < 13) return;
     function addSettingsButton() {
 		console.log("FArchievementsADDSETTINGSBUTTON");
-        if (!document.getElementById("FarchievementsSettings") && game.settings.get('farchievements', 'GameSettingsButton')) {
+        if (!document.getElementById("FarchievementsSettings") && game.settings.get(settingsNamespace, 'GameSettingsButton')) {
             let settingsContainer = document.getElementsByClassName("settings flexcol")[0];
 
             if (settingsContainer) {
@@ -1487,7 +1488,7 @@ Hooks.once('ready', () => {
                     contextItem.innerHTML = `<i class="fas fa-medal"></i> ${game.i18n.localize('Farchievements.ViewAchievements')}`;
 
                     contextItem.onclick = () => {
-                        game.settings.set('farchievements', 'loadSettingsForPlayer', id);
+                        game.settings.set(settingsNamespace, 'loadSettingsForPlayer', id);
                         Achievements.initializeAchievements();
                     };
 
