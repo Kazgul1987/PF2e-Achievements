@@ -455,8 +455,14 @@ class AchievementsScreen extends Application {
         };
 		dialogOptions.resizable = true;
         renderTemplate(path, data).then(dlg => {
+			let achievementWindowTitle;
+			try {
+				achievementWindowTitle = game.settings.get(settingsNamespace, 'AchievementWindowTitle');
+			} catch (err) {
+				achievementWindowTitle = game.i18n.localize('Farchievements.Achievements') || 'Achievements';
+			}
             new Dialog({
-                title: game.settings.get(settingsNamespace, 'AchievementWindowTitle'),
+                title: achievementWindowTitle,
                 content: dlg,
                 buttons: {}
             }, dialogOptions).render(true);
