@@ -413,10 +413,10 @@ class Achievements {
 		}
 	}
     static initializeAchievements() {
-        if (this.AchievementsScreen === undefined) {
-            this.AchievementsScreen = new AchievementsScreen();
+        if (Achievements.AchievementsScreen === undefined) {
+            Achievements.AchievementsScreen = new AchievementsScreen();
         }
-        this.AchievementsScreen.openDialog();
+        Achievements.AchievementsScreen.openDialog();
     } 
 }
 class AchievementsScreen extends Application {
@@ -482,10 +482,10 @@ class AchievementsScreen extends Application {
 		
         const templatePath = `${modulePath}/AchievementsScreen.html`;
 		if(document.getElementsByClassName("achievementsscreen-window").length > 0){}
-        AchievementsScreen.renderMenu(templatePath, templateData);
+        AchievementsScreen.renderMenu(templatePath, templateData, this);
 
     }
-    static renderMenu(path, data) {
+    static renderMenu(path, data, achievementsScreen) {
         const dialogOptions = {
             width: 1050,
 			heith: 630,
@@ -505,7 +505,7 @@ class AchievementsScreen extends Application {
                 title: achievementWindowTitle,
                 content: dlg,
                 buttons: {},
-				render: html => Achievements.AchievementsScreen.activateDeleteAchievementListener(html)
+				render: html => achievementsScreen.activateDeleteAchievementListener(html)
             }, dialogOptions).render(true);
         });
     }
