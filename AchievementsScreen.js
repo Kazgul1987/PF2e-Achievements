@@ -422,9 +422,37 @@ class Achievements {
 class AchievementsScreen extends Application {
 	activateListeners(html) {
         super.activateListeners(html);
+		this.activateDeleteAchievementListener(html);
 		html.find('.SyncAch').click(event => {
 		   //update the actor
 		   ui.notifications.notify("SYNC");
+		});
+	}
+	activateDeleteAchievementListener(html) {
+		html.off('click.farchievementsDelete', '.deleteAchievement');
+		html.on('click.farchievementsDelete', '.deleteAchievement', async (event) => {
+			event.preventDefault();
+			const button = event.currentTarget;
+			const achievementId = button.dataset.achievementId;
+
+			try {
+				if (!achievementId) throw new Error('The achievement ID is missing.');
+
+				const achievementData = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+				if (!Array.isArray(achievementData)) throw new Error('Achievement data is not an array.');
+
+				const achievementIndex = achievementData.findIndex(achievement => achievement?.id === achievementId);
+				if (achievementIndex === -1) throw new Error(`Achievement ${achievementId} was not found.`);
+
+				button.disabled = true;
+				achievementData.splice(achievementIndex, 1);
+				await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementData));
+				await window.loadAchievementsEditMode();
+			} catch (error) {
+				button.disabled = false;
+				console.error('Farchievements | Failed to delete achievement:', error);
+				ui.notifications.error(`Farchievements | Could not delete the achievement: ${error.message}`);
+			}
 		});
 	}
     openDialog() {
@@ -464,7 +492,8 @@ class AchievementsScreen extends Application {
             new Dialog({
                 title: achievementWindowTitle,
                 content: dlg,
-                buttons: {}
+                buttons: {},
+				render: html => Achievements.AchievementsScreen.activateDeleteAchievementListener(html)
             }, dialogOptions).render(true);
         });
     }
