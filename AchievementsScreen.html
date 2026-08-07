@@ -1587,7 +1587,11 @@
 			let notificationPrefix = game.i18n.localize('Farchievements.Notification.Prefix');
 			new Dialog({
 				title: game.i18n.localize('Farchievements.Html.ImportExport.Title'),
-				content: `<p>${game.i18n.localize('Farchievements.Html.ImportExport.Body')}</p><input type="text" id="ImportExportInput" value='${data}'></input>`,
+				content: `<p>${game.i18n.localize('Farchievements.Html.ImportExport.Body')}</p><textarea id="ImportExportInput" style="width:100%;min-height:260px;resize:vertical;"></textarea>`,
+				render: html => {
+					let inputElement = html.find('#ImportExportInput')[0];
+					inputElement.value = data;
+				},
 				buttons: {
 					AchAppend: {
 						label: `<a style="color:orange;" >${game.i18n.localize('Farchievements.Html.ImportExport.AppendFromInput')}</a>`,
@@ -1642,10 +1646,6 @@
 						icon: '<i class="fas fa-copy" style="color:green;"></i>',
 						callback: () => {
 							let inputElement = document.getElementById("ImportExportInput");
-							let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
-							let normalizedResult = normalizeAchievementData(AchievementList);
-							inputElement.value = JSON.stringify(normalizedResult.data);
-							document.body.appendChild(inputElement);
 							inputElement.select();
 							document.execCommand('copy');
 							ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.CopiedToClipboard'));
