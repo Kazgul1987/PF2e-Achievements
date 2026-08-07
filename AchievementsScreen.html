@@ -314,6 +314,11 @@
 
 				let normalizedAchievement = { ...achievement };
 
+				if (!normalizedAchievement.id) {
+					normalizedAchievement.id = foundry.utils.randomID();
+					updated = true;
+				}
+
 				if (normalizedAchievement.campaign == null) {
 					normalizedAchievement.campaign = "";
 					updated = true;
@@ -1230,7 +1235,7 @@
 					<div id="Achievement-${i}" class="far-grid-item">
 						<div class="DragAndDropHandler" draggable="true"><i class="fa-solid fa-up-down-left-right"></i></div>
 						<div class="achievementtools">
-							<button class="deleteAchievement" type="button" onclick="deleteAchievement('${i}')"><i class="fas fa-trash-alt"></i></button>
+							<button class="deleteAchievement" type="button" data-achievement-id="${AchievementList[i].id}"><i class="fas fa-trash-alt"></i></button>
 						</div>
 						<div class="achEditName">
 							<input class="AchInputName" maxlength="40" type="text" id="achievementname${name}" onchange="updateAchievement(1, '${name}')" value="${name}">
@@ -1412,15 +1417,6 @@
 			let len = +AchievementData.length+1;
 			let newAch = new Achievement("Achievement "+len, "", game.settings.get('farchievements', 'standarticon'), [], "", "", "");
 			AchievementData.push(newAch);
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
-			loadAchievementsEditMode();
-		}
-		async function deleteAchievement(achievementID) {
-			console.log("DeleteACH");
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
-			let achievementIndex = +achievementID;
-			let data = AchievementData[achievementID];
-			AchievementData.splice(achievementIndex, 1);
 			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
 			loadAchievementsEditMode();
 		}
