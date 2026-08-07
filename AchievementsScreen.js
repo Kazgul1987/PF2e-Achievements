@@ -432,6 +432,11 @@ class AchievementsScreen extends Application {
 		html.off('click.farchievementsDelete', '.deleteAchievement');
 		html.on('click.farchievementsDelete', '.deleteAchievement', async (event) => {
 			event.preventDefault();
+			if (!game.user.isGM) {
+				ui.notifications.warn(game.i18n.localize('Farchievements.Notification.DeleteGMOnly'));
+				return;
+			}
+
 			const button = event.currentTarget;
 			const achievementId = button.dataset.achievementId;
 
@@ -446,12 +451,19 @@ class AchievementsScreen extends Application {
 
 				button.disabled = true;
 				achievementData.splice(achievementIndex, 1);
-				await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementData));
+				try {
+					await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementData));
+				} catch (error) {
+					console.error(`${moduleId} | Failed to save achievement data after deletion:`, error);
+					ui.notifications.error(game.i18n.localize('Farchievements.Notification.DeleteSaveFailed'));
+					button.disabled = false;
+					return;
+				}
 				await window.loadAchievementsEditMode();
 			} catch (error) {
 				button.disabled = false;
-				console.error('Farchievements | Failed to delete achievement:', error);
-				ui.notifications.error(`Farchievements | Could not delete the achievement: ${error.message}`);
+				console.error(`${moduleId} | Failed to delete achievement:`, error);
+				ui.notifications.error(game.i18n.localize('Farchievements.Notification.DeleteFailed'));
 			}
 		});
 	}

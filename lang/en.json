@@ -165,7 +165,10 @@
         "NoChange": "The data did not change.",
         "Overwritten": "This World's Achievements have been overwritten.",
         "CopiedToClipboard": "Achievements copied to clipboard.",
-        "AppendedFromInput": "Achievements have been appended."
+        "AppendedFromInput": "Achievements have been appended.",
+        "DeleteGMOnly": "Only a GM can delete achievements.",
+        "DeleteFailed": "The achievement could not be deleted because the stored data is invalid or the achievement no longer exists.",
+        "DeleteSaveFailed": "The achievement could not be deleted because the changes could not be saved. Please try again."
     },
 	
     "Farchievements.Html.Secret": "Secret",
