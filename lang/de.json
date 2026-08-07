@@ -160,7 +160,10 @@
         "NoChange": "Die Daten haben sich nicht verändert.",
         "Overwritten": "Die Errungenschaften dieser Welt wurden überschrieben.",
         "CopiedToClipboard": "Errungenschaften in die Zwischenablage kopiert.",
-        "AppendedFromInput": "Errungenschaften wurden angehängt."
+        "AppendedFromInput": "Errungenschaften wurden angehängt.",
+        "DeleteGMOnly": "Nur die Spielleitung kann Errungenschaften löschen.",
+        "DeleteFailed": "Die Errungenschaft konnte nicht gelöscht werden, weil die gespeicherten Daten ungültig sind oder die Errungenschaft nicht mehr existiert.",
+        "DeleteSaveFailed": "Die Errungenschaft konnte nicht gelöscht werden, weil die Änderungen nicht gespeichert werden konnten. Bitte versuche es erneut."
     },
     
 	"Farchievements.Html.Secret": "Geheim",
