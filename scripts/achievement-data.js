@@ -2,6 +2,7 @@ const MODULE_ID = "PF2e-Achievements";
 const SETTINGS_NAMESPACE = "farchievements";
 const SCHEMA_VERSION = 2;
 const PACK_FORMAT = "pf2e-achievements";
+const CURRENT_PACK_VERSION = 1;
 
 const clone = value => foundry.utils.deepClone(value);
 const randomID = () => foundry.utils.randomID();
@@ -110,7 +111,10 @@ export class AchievementStore {
     state[id].players[userId] = { ...this.getPlayerState(id, userId), ...changes };
     await this.saveState(state); return state[id].players[userId];
   }
-  static unlock(id, userId) { return this._changePlayer(id, userId, { unlocked: true, unlockedAt: Date.now() }); }
+  static unlock(id, userId) {
+    const current = this.getPlayerState(id, userId);
+    return this._changePlayer(id, userId, { unlocked: true, unlockedAt: current.unlocked ? current.unlockedAt ?? Date.now() : Date.now() });
+  }
   static lock(id, userId) { return this._changePlayer(id, userId, { unlocked: false, seen: false, unlockedAt: null }); }
   static setSeen(id, userId, seen = true) { return this._changePlayer(id, userId, { seen: Boolean(seen) }); }
   static setProgress(id, userId, progress) { return this._changePlayer(id, userId, { progress: Number(progress) || 0 }); }
@@ -148,6 +152,15 @@ export class AchievementImporter {
     return data;
   }
   static detectVersion(pack) { return Number(pack.version ?? 0); }
+  static validateEnvelope(pack) {
+    if (!pack || typeof pack !== "object" || Array.isArray(pack)) throw new Error("Invalid achievement import");
+    if (pack.format !== undefined && pack.format !== PACK_FORMAT) throw new Error(`Unsupported achievement pack format: ${pack.format}`);
+    if (!Array.isArray(pack.achievements)) throw new Error("Achievement pack has no achievements array");
+    return true;
+  }
+  static assertSupportedVersion(version) {
+    if (!Number.isInteger(version) || version < 0 || version > CURRENT_PACK_VERSION) throw new Error(`Unsupported achievement pack version ${version}`);
+  }
   static migrate(pack, options = {}) {
     if (!Array.isArray(pack.achievements)) throw new Error("Achievement pack has no achievements array");
     const worldBackup = options.worldBackup === true || pack.meta?.type === "world-backup";
@@ -164,7 +177,14 @@ export class AchievementImporter {
   }
   static async merge(pack, options = {}) {
     const behavior = options.behavior ?? "skip";
-    if (!["skip", "update", "duplicate"].includes(behavior)) throw new Error(`Unknown merge behavior ${behavior}`);
+    if (!["skip", "update", "duplicate", "overwrite"].includes(behavior)) throw new Error(`Unknown merge behavior ${behavior}`);
+    if (behavior === "overwrite") {
+      await AchievementStore.saveDefinitions(pack.achievements);
+      const validIds = new Set(pack.achievements.map(item => item.id));
+      const state = pack.worldBackup ? clone(pack.state ?? {}) : Object.fromEntries(Object.entries(AchievementStore.getState()).filter(([id]) => validIds.has(id)));
+      await AchievementStore.saveState(state);
+      return { imported: pack.achievements.length, skipped: 0 };
+    }
     const definitions = AchievementStore.getDefinitions(); const byId = new Map(definitions.map((item, index) => [item.id, index]));
     const importedIds = [];
     for (const source of pack.achievements) {
@@ -185,7 +205,10 @@ export class AchievementImporter {
 }
 
 export async function importAchievements(raw, options = {}) {
-  const parsed = AchievementImporter.parse(raw); AchievementImporter.detectVersion(parsed);
+  const parsed = AchievementImporter.parse(raw);
+  AchievementImporter.validateEnvelope(parsed);
+  const version = AchievementImporter.detectVersion(parsed);
+  AchievementImporter.assertSupportedVersion(version);
   const migrated = AchievementImporter.migrate(parsed, options); AchievementImporter.validate(migrated);
   return AchievementImporter.merge(migrated, options);
 }
@@ -199,6 +222,8 @@ export function exportAchievements({ worldBackup = false, name = "Achievement Pa
 export async function migrateAchievementSchema() {
   if (!game.user?.isGM || game.settings.get(SETTINGS_NAMESPACE, "achievementSchemaVersion") >= SCHEMA_VERSION) return false;
   const raw = game.settings.get(SETTINGS_NAMESPACE, "achievementdataNEW");
+  const delimiter = game.settings.get(SETTINGS_NAMESPACE, "achievementdata");
+  if ((!raw || raw === "[]") && typeof delimiter === "string" && delimiter.trim()) throw new Error("Legacy achievement migration did not produce valid JSON data.");
   let legacy;
   try { legacy = raw ? JSON.parse(raw) : []; } catch (error) { throw new Error("Legacy achievementdataNEW is invalid JSON", { cause: error }); }
   if (!Array.isArray(legacy)) throw new Error("Legacy achievementdataNEW is not an array");
@@ -210,6 +235,7 @@ export async function migrateAchievementSchema() {
   if (previousDefinitions.length || Object.keys(previousState).length) {
     validateMigration(legacy, previousDefinitions, previousState);
     await game.settings.set(SETTINGS_NAMESPACE, "achievementSchemaVersion", SCHEMA_VERSION);
+    console.log(`${MODULE_ID} | Schema v2 migration completed`);
     return true;
   }
   const definitions = []; const state = {};
@@ -222,6 +248,7 @@ export async function migrateAchievementSchema() {
     await AchievementStore.saveDefinitions(definitions); await AchievementStore.saveState(state);
     validateMigration(legacy, AchievementStore.getDefinitions(), AchievementStore.getState());
     await game.settings.set(SETTINGS_NAMESPACE, "achievementSchemaVersion", SCHEMA_VERSION);
+    console.log(`${MODULE_ID} | Schema v2 migration completed`);
     return true;
   } catch (error) {
     try { await game.settings.set(SETTINGS_NAMESPACE, "achievementDefinitions", previousDefinitions); await game.settings.set(SETTINGS_NAMESPACE, "achievementState", previousState); } catch (rollbackError) { console.error(`${MODULE_ID} | Achievement migration rollback failed`, rollbackError); }
@@ -229,9 +256,58 @@ export async function migrateAchievementSchema() {
   }
 }
 
+export async function migrateDelimiterDataToLegacyJson() {
+  const existing = game.settings.get(SETTINGS_NAMESPACE, "achievementdataNEW");
+  if (existing) return false;
+  const raw = game.settings.get(SETTINGS_NAMESPACE, "achievementdata");
+  if (typeof raw !== "string" || !raw.trim()) return false;
+  console.log(`${MODULE_ID} | Starting legacy achievement migration`);
+  const clientRows = String(game.settings.get(SETTINGS_NAMESPACE, "clientdataSYNC") ?? "").split("||").filter(Boolean);
+  const unlocks = new Map(clientRows.map(row => { const [userId, ids = ""] = row.split(":"); return [userId, new Set(ids.split(",").filter(Boolean))]; }));
+  const legacy = raw.split(";;;").filter(Boolean).map((row, index) => {
+    const [heading = "", image = "", description = ""] = row.split("////");
+    const separator = heading.indexOf(":::");
+    const legacyId = separator >= 0 ? heading.slice(0, separator) : String(index + 1);
+    const name = separator >= 0 ? heading.slice(separator + 3) : heading;
+    const ids = new Set([String(index), legacyId]);
+    const players = [...unlocks].filter(([, values]) => [...ids].some(id => values.has(id))).map(([userId]) => userId);
+    return { name, image, description, points: 1, players, seenBy: [], playerDates: {}, playerProgress: {}, progressRequired: 0, progressType: "standard" };
+  });
+  await game.settings.set(SETTINGS_NAMESPACE, "achievementdataNEW", JSON.stringify(legacy));
+  const persisted = game.settings.get(SETTINGS_NAMESPACE, "achievementdataNEW");
+  let parsed;
+  try { parsed = JSON.parse(persisted); } catch { parsed = null; }
+  if (!Array.isArray(parsed) || parsed.length !== legacy.length) throw new Error("Legacy achievement migration did not produce valid JSON data.");
+  console.log(`${MODULE_ID} | Legacy JSON migration completed`);
+  return true;
+}
+
+export async function migrateAchievements() {
+  try {
+    await migrateDelimiterDataToLegacyJson();
+    return await migrateAchievementSchema();
+  } catch (error) {
+    console.error(`${MODULE_ID} | Achievement migration failed`, error);
+    throw error;
+  }
+}
+
+export async function migrateLegacySeenFlags(users = game.users?.contents ?? []) {
+  const definitions = AchievementStore.getDefinitions();
+  for (const user of users) {
+    const names = await user.getFlag?.(MODULE_ID, "seenAchievements");
+    if (!Array.isArray(names)) continue;
+    for (const name of names) {
+      const matches = definitions.filter(item => item.name === name);
+      if (matches.length === 1) await AchievementStore.setSeen(matches[0].id, user.id, true);
+      else if (matches.length > 1) console.warn(`${MODULE_ID} | Cannot migrate ambiguous seen achievement name: ${name}`);
+    }
+  }
+}
+
 Hooks.once("init", () => {
   game.settings.register(SETTINGS_NAMESPACE, "achievementDefinitions", { scope: "world", config: false, type: Array, default: [] });
   game.settings.register(SETTINGS_NAMESPACE, "achievementState", { scope: "world", config: false, type: Object, default: {} });
   game.settings.register(SETTINGS_NAMESPACE, "achievementSchemaVersion", { scope: "world", config: false, type: Number, default: 1 });
-  window.PF2eAchievements = { AchievementStore, AchievementImporter, importAchievements, exportAchievements, migrateAchievementSchema, validateMigration };
+  window.PF2eAchievements = { AchievementStore, AchievementImporter, importAchievements, exportAchievements, migrateAchievementSchema, migrateDelimiterDataToLegacyJson, migrateAchievements, migrateLegacySeenFlags, validateMigration };
 });

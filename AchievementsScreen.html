@@ -1571,7 +1571,7 @@
 								if (result.skipped > 0) {
 									ui.notifications.warn(`${notificationPrefix}${result.skipped} invalid achievements were skipped.`);
 								}
-								ui.notifications.notify(`${notificationPrefix}${result.appended} achievements appended successfully.`);
+								ui.notifications.notify(`${notificationPrefix}${result.imported} achievements appended successfully.`);
 								reloadAchievements();
 							}
 							catch (error) {
@@ -1624,10 +1624,7 @@
 							}
 
 							try {
-								const parsed = window.PF2eAchievements.AchievementImporter.parse(raw);
-								const migrated = window.PF2eAchievements.AchievementImporter.migrate(parsed);
-								window.PF2eAchievements.AchievementImporter.validate(migrated);
-								await window.PF2eAchievements.AchievementStore.saveDefinitions(migrated.achievements);
+								await window.PF2eAchievements.importAchievements(raw, { behavior: "overwrite" });
 							} catch (error) {
 								console.error("PF2e-Achievements | Import failed", error);
 								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
@@ -1743,7 +1740,7 @@
 				if($('.PlayerNavButton.active')[0].attributes.value.value != null && $('.PlayerNavButton.active')[0].attributes.value.value != "GMVIEW")
 					game.settings.set('farchievements', 'loadSettingsForPlayer', $('.PlayerNavButton.active')[0].attributes.value.value);	
 			}
-		loadPageNav(JSON.parse(game.settings.get('farchievements','achievementdataNEW')));
+		loadPageNav(window.PF2eAchievements.AchievementStore.getDefinitions());
 		}
 		async function onClickPrevPage(){
 			let newval = game.settings.get('farchievements', 'currentPage') -1;
@@ -1753,7 +1750,7 @@
 				if($('.PlayerNavButton.active')[0].attributes.value.value != null && $('.PlayerNavButton.active')[0].attributes.value.value != "GMVIEW")
 					game.settings.set('farchievements', 'loadSettingsForPlayer', $('.PlayerNavButton.active')[0].attributes.value.value);	
 			}
-		loadPageNav(JSON.parse(game.settings.get('farchievements','achievementdataNEW')));
+		loadPageNav(window.PF2eAchievements.AchievementStore.getDefinitions());
 		}
 		async function onClickNextPage(){
 			let newval = game.settings.get('farchievements', 'currentPage') +1;
@@ -1763,7 +1760,7 @@
 				if($('.PlayerNavButton.active')[0].attributes.value.value != null && $('.PlayerNavButton.active')[0].attributes.value.value != "GMVIEW")
 					game.settings.set('farchievements', 'loadSettingsForPlayer', $('.PlayerNavButton.active')[0].attributes.value.value);	
 			}
-			loadPageNav(JSON.parse(game.settings.get('farchievements','achievementdataNEW')));
+			loadPageNav(window.PF2eAchievements.AchievementStore.getDefinitions());
 		}
 	</script>
 </head>
