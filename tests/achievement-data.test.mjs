@@ -116,12 +116,12 @@ test("import rejects foreign formats and future versions without changing data",
   assert.deepEqual(values.get("achievementDefinitions"), before);
 });
 
-test("overwrite prunes orphan state but keeps state for retained IDs", async () => {
+test("definition-only overwrite never changes existing world state", async () => {
   await model.AchievementStore.saveDefinitions([{ id: "A", name: "A" }, { id: "B", name: "B" }]);
   await model.AchievementStore.saveState({ A: { players: { u: { unlocked: true } } }, B: { players: {} } });
   const result = await model.importAchievements({ format: "pf2e-achievements", version: 1, achievements: [{ id: "A", name: "Updated" }, { id: "C", name: "C" }] }, { behavior: "overwrite" });
   assert.equal(result.imported, 2);
-  assert.deepEqual(Object.keys(values.get("achievementState")), ["A"]);
+  assert.deepEqual(Object.keys(values.get("achievementState")), ["A", "B"]);
   assert.equal(values.get("achievementState").A.players.u.unlocked, true);
 });
 
@@ -141,4 +141,68 @@ test("pagination source sees definitions imported after initial render", async (
   const pack = { format: "pf2e-achievements", version: 1, achievements: Array.from({ length: 50 }, (_, index) => ({ id: `new-${index}`, name: `New ${index}` })) };
   await model.importAchievements(pack, { behavior: "duplicate" });
   assert.equal(model.AchievementStore.getDefinitions().length, 150);
+});
+
+test("dice progress and chain mutations retain stable IDs and definition data", async () => {
+  await model.AchievementStore.saveDefinitions([
+    { id: "natural-one", name: "Unlucky", progressType: "dice", progressRequired: "1", diceType: "d20" },
+    { id: "chain", name: "Lucky Streak", progressType: "diceChain", progressRequired: "20", chainLength: 2, diceType: "d20" }
+  ]);
+  await model.AchievementStore.saveState({});
+  const definitionsBefore = structuredClone(model.AchievementStore.getDefinitions());
+
+  await model.AchievementStore.processDiceRoll({ formula: "1d20 + 12", total: 13, natural: 1 }, "roller");
+  assert.equal(model.AchievementStore.getPlayerState("natural-one", "roller").unlocked, true);
+  assert.equal(model.AchievementStore.getPlayerState("chain", "roller").progress, 0);
+
+  await model.AchievementStore.processDiceRoll({ formula: "1d20 + 5", total: 25, natural: 20 }, "roller");
+  assert.equal(model.AchievementStore.getPlayerState("chain", "roller").progress, 1);
+  await model.AchievementStore.processDiceRoll({ formula: "1d20 + 5", total: 25, natural: 20 }, "roller");
+  const chainState = model.AchievementStore.getPlayerState("chain", "roller");
+  assert.equal(chainState.unlocked, true);
+  assert.ok(chainState.unlockedAt);
+  assert.deepEqual(model.AchievementStore.getDefinitions(), definitionsBefore);
+});
+
+test("dice chain failure resets only the correct user's state", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "chain-reset", name: "Chain", progressType: "diceChain", progressRequired: ">10", chainLength: 3, diceType: "d20" }]);
+  await model.AchievementStore.saveState({});
+  await model.AchievementStore.processDiceRoll({ formula: "1d20", total: 15, natural: 15 }, "u1");
+  await model.AchievementStore.setProgress("chain-reset", "u2", 2);
+  await model.AchievementStore.processDiceRoll({ formula: "1d20", total: 4, natural: 4 }, "u1");
+  assert.equal(model.AchievementStore.getPlayerState("chain-reset", "u1").progress, 0);
+  assert.equal(model.AchievementStore.getPlayerState("chain-reset", "u2").progress, 2);
+  assert.equal(model.AchievementStore.getDefinition("chain-reset").name, "Chain");
+});
+
+test("unlockMany uses user IDs, excludes duplicates, and preserves dates and seen state", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "everyone", name: "Everyone" }]);
+  await model.AchievementStore.saveState({});
+  await model.AchievementStore.setSeen("everyone", "user-a", true);
+  await model.AchievementStore.unlockMany("everyone", ["user-a", "user-b", "user-a"]);
+  const firstDate = model.AchievementStore.getPlayerState("everyone", "user-a").unlockedAt;
+  await model.AchievementStore.unlockMany("everyone", ["user-a"]);
+  assert.equal(model.AchievementStore.getPlayerState("everyone", "user-a").unlockedAt, firstDate);
+  assert.equal(model.AchievementStore.getPlayerState("everyone", "user-a").seen, true);
+  assert.equal(model.AchievementStore.getPlayerState("everyone", "user-b").unlocked, true);
+  assert.deepEqual(model.AchievementStore.getDefinitions().map(item => item.id), ["everyone"]);
+});
+
+test("saveLegacyView safely matches reordered id-less entries rather than using indexes", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "A", name: "Alpha" }, { id: "B", name: "Beta" }, { id: "C", name: "Gamma" }]);
+  await model.AchievementStore.saveState({ A: { players: { u: { unlocked: true, seen: true, unlockedAt: 42, progress: 3 } } } });
+  const reordered = model.AchievementStore.getLegacyView().map(({ id: _id, ...item }) => item);
+  await model.AchievementStore.saveLegacyView([reordered[1], reordered[0], reordered[2]]);
+  assert.deepEqual(model.AchievementStore.getDefinitions().map(item => item.id), ["B", "A", "C"]);
+  assert.equal(model.AchievementStore.getPlayerState("A", "u").unlockedAt, 42);
+});
+
+test("debug reset clears definitions and state and restores the migration start version", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "reset-me", name: "Reset" }]);
+  await model.AchievementStore.unlock("reset-me", "u");
+  values.set("achievementSchemaVersion", 2);
+  await model.AchievementStore.resetAll();
+  assert.deepEqual(values.get("achievementDefinitions"), []);
+  assert.deepEqual(values.get("achievementState"), {});
+  assert.equal(values.get("achievementSchemaVersion"), 1);
 });

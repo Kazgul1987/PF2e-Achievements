@@ -443,16 +443,11 @@ class AchievementsScreen extends Application {
 			try {
 				if (!achievementId) throw new Error('The achievement ID is missing.');
 
-				const achievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-				if (!Array.isArray(achievementData)) throw new Error('Achievement data is not an array.');
-
-				const achievementIndex = achievementData.findIndex(achievement => achievement?.id === achievementId);
-				if (achievementIndex === -1) throw new Error(`Achievement ${achievementId} was not found.`);
+				if (!window.PF2eAchievements.AchievementStore.getDefinition(achievementId)) throw new Error(`Achievement ${achievementId} was not found.`);
 
 				button.disabled = true;
-				achievementData.splice(achievementIndex, 1);
 				try {
-					await window.PF2eAchievements.AchievementStore.saveLegacyView(achievementData);
+					await window.PF2eAchievements.AchievementStore.deleteAchievement(achievementId);
 				} catch (error) {
 					console.error(`${moduleId} | Failed to save achievement data after deletion:`, error);
 					ui.notifications.error(game.i18n.localize('Farchievements.Notification.DeleteSaveFailed'));
@@ -681,156 +676,26 @@ Hooks.on('renderSceneNavigation', async function() {
 });
 
 Hooks.on('createChatMessage', async (chatMessage) => {
-    if (!game.user.isGM) return;
+    if (!game.user.isGM || !chatMessage.rolls?.length) return;
 
-    // Check if the chat message contains roll data
-    if (chatMessage.rolls && chatMessage.rolls.length > 0) {
-        console.log("Farchievements | Checking rolls in chat message...");
+    const roll = chatMessage.rolls[0];
+    const userId = chatMessage.user?.id;
+    if (!userId) return;
 
-        let rollData = chatMessage.rolls[0];
-        let rolledValue = rollData.total;
-        let userId = chatMessage.user.id;
-
-        console.log(`Farchievements | Roll detected in chat message for user: ${userId}, roll total: ${rolledValue}`);
-
-        let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
-        console.log(`Farchievements | Loaded achievement list:`, achievementList);
-
-        // Filter for achievements that have a progressType of 'dice' or 'diceChain'
-        let diceAchievements = achievementList.filter(ach => ach.progressType === 'dice' || ach.progressType === 'diceChain');
-        console.log(`Farchievements | Filtered dice achievements:`, diceAchievements);
-
-        let hasAchievementUpdated = false;
-
-        diceAchievements.forEach(achievementData => {
-            console.log(`Farchievements | Processing achievement: ${achievementData.name}`);
-            
-            let achievement = new Achievement(
-                achievementData.name,
-                achievementData.description,
-                achievementData.image,
-                achievementData.points,
-                achievementData.glowing,
-                achievementData.color,
-                achievementData.players,
-                achievementData.seenBy,
-                achievementData.playerDates,
-                achievementData.progressRequired,
-                achievementData.progressType,
-                achievementData.playerProgress,
-                achievementData.chainLength,
-                achievementData.diceType,
-				achievementData.campaign,
-				achievementData.adventure,
-				achievementData.chapter
-            );
-
-            // Check if the dice type matches the achievement's diceType requirement
-            if (rollData.formula.includes(achievement.diceType)) {
-                // Check if the achievement already applies to the player who rolled
-                if (achievement.players.includes(userId)) {
-                    console.log(`Farchievements | Player ${userId} already has achievement: ${achievement.name}`);
-                    return; // Skip if the player already has the achievement
-                }
-
-                console.log(`Farchievements | Rolled value: ${rolledValue}`);
-
-                if (achievement.progressType === 'dice') {
-                    console.log(`Farchievements | Handling [dice] achievement for: ${achievement.name}`);
-                    
-                    let condition = achievement.progressRequired;
-                    if (typeof condition === 'string') {
-                        let targetValue;
-                        console.log(`Farchievements | Condition is a string: ${condition}`);
-
-                        if (condition.startsWith('<')) {
-                            targetValue = parseInt(condition.substring(1).trim());
-                            console.log(`Farchievements | Target value is less than ${targetValue}`);
-                            if (rolledValue < targetValue) {
-                                achievement.addPlayer(userId);
-                                hasAchievementUpdated = true;
-                                console.log(`Farchievements | Achievement unlocked for player: ${userId} (rolled < ${targetValue})`);
-                            }
-                        } else if (condition.startsWith('>')) {
-                            targetValue = parseInt(condition.substring(1).trim());
-                            console.log(`Farchievements | Target value is greater than ${targetValue}`);
-                            if (rolledValue > targetValue) {
-                                achievement.addPlayer(userId);
-                                hasAchievementUpdated = true;
-                                console.log(`Farchievements | Achievement unlocked for player: ${userId} (rolled > ${targetValue})`);
-                            }
-                        } else {
-                            targetValue = parseInt(condition);
-                            console.log(`Farchievements | Target value is equal to ${targetValue}`);
-                            if (rolledValue === targetValue) {
-                                achievement.addPlayer(userId);
-                                hasAchievementUpdated = true;
-                                console.log(`Farchievements | Achievement unlocked for player: ${userId} (rolled == ${targetValue})`);
-                            }
-                        }
-                    }
-                } else if (achievement.progressType === 'diceChain') {
-                    console.log(`Farchievements | Handling [diceChain] achievement for: ${achievement.name}`);
-                    
-                    let condition = achievement.progressRequired;
-                    if (typeof condition === 'string') {
-                        let targetValue;
-                        console.log(`Farchievements | Condition is a string: ${condition}`);
-
-                        if (condition.startsWith('<')) {
-                            targetValue = parseInt(condition.substring(1).trim());
-                            console.log(`Farchievements | Target value is less than ${targetValue}`);
-                            if (rolledValue < targetValue) {
-                                achievement.addProgress(userId, true, true); // Increment chain
-                                console.log(`Farchievements | Successful roll for chain (rolled < ${targetValue})`);
-                            } else {
-                                // Reset the chain on failure
-                                achievement.addProgress(userId, false, true);
-                                console.log(`Farchievements | Chain reset for player ${userId}`);
-                            }
-                        } else if (condition.startsWith('>')) {
-                            targetValue = parseInt(condition.substring(1).trim());
-                            console.log(`Farchievements | Target value is greater than ${targetValue}`);
-                            if (rolledValue > targetValue) {
-                                achievement.addProgress(userId, true, true); // Increment chain
-                                console.log(`Farchievements | Successful roll for chain (rolled > ${targetValue})`);
-                            } else {
-                                // Reset the chain on failure
-                                achievement.addProgress(userId, false, true);
-                                console.log(`Farchievements | Chain reset for player ${userId}`);
-                            }
-                        } else {
-                            targetValue = parseInt(condition);
-                            console.log(`Farchievements | Target value is equal to ${targetValue}`);
-                            if (rolledValue === targetValue) {
-                                achievement.addProgress(userId, true, true); // Increment chain
-                                console.log(`Farchievements | Successful roll for chain (rolled == ${targetValue})`);
-                            } else {
-                                // Reset the chain on failure
-                                achievement.addProgress(userId, false, true);
-                                console.log(`Farchievements | Chain reset for player ${userId}`);
-                            }
-                        }
-                    }
-
-                    if (achievement.getProgress(userId) >= achievement.chainLength) {
-                        // Chain complete, award achievement
-                        console.log(`Farchievements | Chain complete, awarding achievement to player ${userId}`);
-                        achievement.addPlayer(userId);
-                        hasAchievementUpdated = true;
-                    }
-                }
-
-                // Update the achievement list in game settings
-                let updatedAchievementList = achievementList.map(a => (a.id === achievement.id ? achievement : a));
-                void window.PF2eAchievements.AchievementStore.saveLegacyView(updatedAchievementList);
-            }
-        });
-
-        // Only send the update message if any achievement was updated
-        if (hasAchievementUpdated) {
-            SendSyncMessage();
-        }
+    // PF2e totals include modifiers. Prefer the active die result for natural-roll
+    // achievements and fall back to the total for roll shapes without dice data.
+    const natural = roll.dice?.flatMap(die => die.results ?? [])
+        .find(result => result.active !== false && !result.discarded)?.result;
+    try {
+        const result = await window.PF2eAchievements.AchievementStore.processDiceRoll({
+            formula: roll.formula ?? "",
+            total: roll.total,
+            natural
+        }, userId);
+        if (result.unlocked.length) SendSyncMessage();
+    } catch (error) {
+        console.error(`${moduleId} | Failed to process dice achievements`, error);
+        ui.notifications.error("PF2e Achievements: Dice achievement processing failed. See console for details.");
     }
 });
 
@@ -920,6 +785,7 @@ window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
 	await game.settings.set(settingsNamespace, 'achievementdataNEW',"");
 	await game.settings.set(settingsNamespace, 'clientdataSYNC',"");
 	await game.settings.set(settingsNamespace, 'clientdata', "");
+	await window.PF2eAchievements.AchievementStore.resetAll();
 	// Also clear per-user "seen" flags
 	for (const u of game.users.contents) {
 		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
@@ -1143,39 +1009,12 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                     title: game.i18n.localize('Farchievements.Dialog.UnlockForAllTitle'),
                     content: game.i18n.format('Farchievements.Dialog.UnlockForAllContent', { achievement: achievement.name }),
                     yes: async () => {
-                        let updatedList = window.PF2eAchievements.AchievementStore.getLegacyView();
-                        let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
-
-                        if (!updatedAchievement) {
+                        if (!window.PF2eAchievements.AchievementStore.getDefinition(achievement.id)) {
                             ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
                             return;
                         }
-
-                        let achievementInstance = new Achievement(
-                            updatedAchievement.name,
-                            updatedAchievement.description,
-                            updatedAchievement.image,
-                            updatedAchievement.points,
-                            updatedAchievement.glowing,
-                            updatedAchievement.color,
-                            updatedAchievement.players,
-                            updatedAchievement.seenBy,
-                            updatedAchievement.playerDates,
-                            updatedAchievement.progressRequired,
-                            updatedAchievement.progressType,
-                            updatedAchievement.playerProgress,
-                            updatedAchievement.chainLength,
-                            updatedAchievement.diceType,
-                            updatedAchievement.campaign,
-                            updatedAchievement.adventure,
-                            updatedAchievement.chapter
-                        );
-
-                        let targetUsers = game.users.filter(user => !user.isGM);
-                        targetUsers.forEach(user => achievementInstance.addPlayer(user.id));
-
-                        let finalList = updatedList.map(ach => (ach.id === achievementInstance.id ? achievementInstance : ach));
-                        await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
+                        const targetIds = game.users.filter(user => !user.isGM).map(user => user.id);
+                        await window.PF2eAchievements.AchievementStore.unlockMany(achievement.id, targetIds);
                         SendSyncMessage();
                         ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForAll'));
                     }
@@ -1220,38 +1059,12 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                                     return;
                                 }
 
-                                let updatedList = window.PF2eAchievements.AchievementStore.getLegacyView();
-                                let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
-
-                                if (!updatedAchievement) {
+                                if (!window.PF2eAchievements.AchievementStore.getDefinition(achievement.id)) {
                                     ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
                                     return;
                                 }
-
-                                let achievementInstance = new Achievement(
-                                    updatedAchievement.name,
-                                    updatedAchievement.description,
-                                    updatedAchievement.image,
-                                    updatedAchievement.points,
-                                    updatedAchievement.glowing,
-                                    updatedAchievement.color,
-                                    updatedAchievement.players,
-                                    updatedAchievement.seenBy,
-                                    updatedAchievement.playerDates,
-                                    updatedAchievement.progressRequired,
-                                    updatedAchievement.progressType,
-                                    updatedAchievement.playerProgress,
-                                    updatedAchievement.chainLength,
-                                    updatedAchievement.diceType,
-                                    updatedAchievement.campaign,
-                                    updatedAchievement.adventure,
-                                    updatedAchievement.chapter
-                                );
-
-                                selectedIds.forEach(userId => achievementInstance.addPlayer(userId));
-
-                                let finalList = updatedList.map(ach => (ach.id === achievementInstance.id ? achievementInstance : ach));
-                                await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
+                                const validIds = selectedIds.filter(userId => game.users.get(userId) && !game.users.get(userId).isGM);
+                                await window.PF2eAchievements.AchievementStore.unlockMany(achievement.id, validIds);
                                 SendSyncMessage();
                                 ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForPlayers'));
                             }
