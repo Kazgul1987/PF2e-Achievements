@@ -16,15 +16,11 @@
 			let achievementElement = iconElement.closest('.far-grid-item');
 			if (!achievementElement) return;
 
-			let achievementName = achievementElement.querySelector('.AchName')?.innerText.trim();
-			if (!achievementName) return;
-
-			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-			let achievement = AchievementData.find(ach => ach.name === achievementName);
-
+			const achievementId = achievementElement.dataset.achievementId;
+			if (!achievementId) return;
+			const achievement = window.PF2eAchievements.AchievementStore.getDefinition(achievementId);
 			if (achievement && achievement.known !== "unknownAch") {
-				let playerId = getActivePlayer();
-				window.Farchievements.DisplayAchievementPopup(achievementName, playerId);
+				window.Farchievements.DisplayAchievementPopup(achievementId, getActivePlayer());
 			}
 		});
 
@@ -218,9 +214,7 @@
 
 			let normalizedResult = normalizeAchievementData(AchievementData);
 			AchievementData = normalizedResult.data;
-			if (normalizedResult.updated) {
-				await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
-			}
+			// Legacy display defaults are normalized in memory only; current UI writes use direct store APIs.
 
 			let searchValue = game.settings.get('farchievements', 'lastSearchTerm')?.toLowerCase().trim() || "";
 			let sortType = game.settings.get('farchievements', 'lastSortType') || "nameAsc";
@@ -1019,9 +1013,7 @@
 			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let normalizedResult = normalizeAchievementData(AchievementData);
 			AchievementData = normalizedResult.data;
-			if (normalizedResult.updated) {
-				await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
-			}
+			// Legacy display defaults are normalized in memory only; current UI writes use direct store APIs.
 			loadPageNav(AchievementData);
 
 			document.getElementById('CustomAchievmentBackgroundStyling').innerHTML = "";
@@ -1145,10 +1137,11 @@
 
 				let playerList = game.users.contents.filter(user => !user.isGM);
 				name = AchievementList[i].name;
+				const achievementId = AchievementList[i].id;
 
 				let secretChecked = AchievementList[i].secret ? 'checked' : '';
 				let secretHTML = `<label AchSecretLabel>${langSecret}:</label>
-                  <input type="checkbox" id="achievementSecret${name}" ${secretChecked} onchange="updateAchievement(11, '${name}')">`;
+                  <input type="checkbox" id="achievement-secret-${achievementId}" ${secretChecked} onchange="updateAchievement(11, '${achievementId}')">`;
 
 
 				for (let j = 0; j < playerList.length; j++) { // J = PLAYER_ID GENERATE CLICKABLE PLAYER LABELS
@@ -1175,12 +1168,12 @@
 				} // IF STANDARD ICON USE ICON DEFINED IN GAMESETTINGS
 				
 				description = AchievementList[i].description;
-				let AchievementIconHTML = '<img class="EditModeIcon" id="EditIcon' + name + '" src="' + icon + '" onclick="setAchievementImg(`' + name + '`)"></img>';
+				let AchievementIconHTML = '<img class="EditModeIcon" id="achievement-edit-icon-' + achievementId + '" src="' + icon + '" onclick="setAchievementImg(`' + achievementId + '`)"></img>';
 
 				// Create progress input fields for editing mode
 				let progressHTML = `<div class="achEditProgress">
 										<label>${langProgressType}:</label>
-										<select id="achievementProgressType${name}" onchange="updateAchievement(8, '${name}')">
+										<select id="achievement-progress-type-${achievementId}" onchange="updateAchievement(8, '${achievementId}')">
 											<option value="standard" ${progressType === 'standard' ? 'selected' : ''}>Standard</option>
 											<option value="count" ${progressType === 'count' ? 'selected' : ''}>Counter</option>
 											<option value="dice" ${progressType === 'dice' ? 'selected' : ''}>Dice</option>
@@ -1191,7 +1184,7 @@
 				// Only display diceType dropdown if progressType is 'dice' or 'diceChain'
 				if (progressType === 'dice' || progressType === 'diceChain') {
 					progressHTML += `<label>${langDiceType}:</label>
-										<select class="AchDiceTypeSelect" id="achievementDiceType${name}" onchange="updateAchievement(9, '${name}')">
+										<select class="AchDiceTypeSelect" id="achievement-dice-type-${achievementId}" onchange="updateAchievement(9, '${achievementId}')">
 											<option value="d4" ${diceType === 'd4' ? 'selected' : ''}>d4</option>
 											<option value="d6" ${diceType === 'd6' ? 'selected' : ''}>d6</option>
 											<option value="d8" ${diceType === 'd8' ? 'selected' : ''}>d8</option>
@@ -1206,18 +1199,18 @@
 				if (progressType !== 'standard') {
 					if(AchievementList[i].progressType == 'count'){
 						progressHTML += `<label>${langProgressRequired}:</label>
-										<input class="AchInputProgress" type="number" id="achievementProgressRequired${name}" value="${progressRequired}" onchange="updateAchievement(7, '${name}')"><br>`;
+										<input class="AchInputProgress" type="number" id="achievement-progress-required-${achievementId}" value="${progressRequired}" onchange="updateAchievement(7, '${achievementId}')"><br>`;
 					}
 					else{
 						progressHTML += `<label>${langValueRequired}:</label>
-										<input class="AchInputProgress" style="margin-left: 20px;" type="text" id="achievementProgressRequired${name}" value="${progressRequired}" onchange="updateAchievement(7, '${name}')"><br>`;
+										<input class="AchInputProgress" style="margin-left: 20px;" type="text" id="achievement-progress-required-${achievementId}" value="${progressRequired}" onchange="updateAchievement(7, '${achievementId}')"><br>`;
 					}
 				}
 
 				// Display "Chain Length" input if progressType is "diceChain"
 				if (progressType === 'diceChain') {
 					progressHTML += `<label>${langChainLength}:</label>
-										<input class="AchInputChainLength" type="number" id="achievementChainLength${name}" value="${chainLength}" onchange="updateAchievement(10, '${name}')"><br>`;
+										<input class="AchInputChainLength" type="number" id="achievement-chain-length-${achievementId}" value="${chainLength}" onchange="updateAchievement(10, '${achievementId}')"><br>`;
 				}
 
 				progressHTML += `</div>`; // End progressHTML
@@ -1229,31 +1222,31 @@
 							<button class="deleteAchievement" type="button" data-achievement-id="${AchievementList[i].id}"><i class="fas fa-trash-alt"></i></button>
 						</div>
 						<div class="achEditName">
-							<input class="AchInputName" maxlength="40" type="text" id="achievementname${name}" onchange="updateAchievement(1, '${name}')" value="${name}">
+							<input class="AchInputName" maxlength="40" type="text" id="achievement-name-${achievementId}" onchange="updateAchievement(1, '${achievementId}')" value="${name}">
 						</div>
 						<div style="flex;display: inline-flex;" class="achEditIcon">${AchievementIconHTML}
 							<div style="width: 100%;overflow-y: scroll;height: 76px;">${labels}</div>
 						</div>
 						<div class="achEditInpImg">
-							<input class="AchInputImg" type="text" id="achievementimg${name}" onchange="updateAchievement(2, '${name}')" value="${icon}">
+							<input class="AchInputImg" type="text" id="achievement-image-${achievementId}" onchange="updateAchievement(2, '${achievementId}')" value="${icon}">
 						</div>
 						<div class="achEditInpDesc">
-							<textarea input class="AchInputDes" type="text" id="achievementdes${name}" cols="40" rows="5" onchange="updateAchievement(3, '${name}')">${description}</textarea>
+							<textarea input class="AchInputDes" type="text" id="achievement-description-${achievementId}" cols="40" rows="5" onchange="updateAchievement(3, '${achievementId}')">${description}</textarea>
 						</div>
 						<div class="achEditMetadata">
 							<label>Campaign:</label>
-							<input class="AchInputMeta" type="text" id="achievementCampaign${name}" list="achievementCampaignOptions" onchange="updateAchievement(12, '${name}')" value="${campaign}">
+							<input class="AchInputMeta" type="text" id="achievement-campaign-${achievementId}" list="achievementCampaignOptions" onchange="updateAchievement(12, '${achievementId}')" value="${campaign}">
 							<label>Adventure:</label>
-							<input class="AchInputMeta" type="text" id="achievementAdventure${name}" list="achievementAdventureOptions" onchange="updateAchievement(13, '${name}')" value="${adventure}">
+							<input class="AchInputMeta" type="text" id="achievement-adventure-${achievementId}" list="achievementAdventureOptions" onchange="updateAchievement(13, '${achievementId}')" value="${adventure}">
 							<label>Chapter:</label>
-							<input class="AchInputMeta" type="text" id="achievementChapter${name}" list="achievementChapterOptions" onchange="updateAchievement(14, '${name}')" value="${chapter}">
+							<input class="AchInputMeta" type="text" id="achievement-chapter-${achievementId}" list="achievementChapterOptions" onchange="updateAchievement(14, '${achievementId}')" value="${chapter}">
 						</div>
 						<div class="achEditPoints">
 							<label>${langScore}:</label>
-							<input class="AchInputPoints" maxlength="40" type="number" id="achievementPoints${name}" onchange="updateAchievement(4, '${name}')" value="${points}">
+							<input class="AchInputPoints" maxlength="40" type="number" id="achievement-points-${achievementId}" onchange="updateAchievement(4, '${achievementId}')" value="${points}">
 							<label class="glowAchInputLabel">${langGlow}:</label>
-							<input type="checkbox" onchange="updateAchievement(5, '${name}')" id="glowCheck${name}" name="glow" ${glowing}>
-							<input type="color" id="farchievementsColorPicker${name}" onchange="updateAchievement(6, '${name}')" value="${color}">
+							<input type="checkbox" onchange="updateAchievement(5, '${achievementId}')" id="achievement-glowing-${achievementId}" name="glow" ${glowing}>
+							<input type="color" id="achievement-color-${achievementId}" onchange="updateAchievement(6, '${achievementId}')" value="${color}">
 						</div>
 						<div class="achSecretToggle">
 							${secretHTML}
@@ -1346,40 +1339,24 @@
 			return true;
 		}
 		async function addAchievement() {
-			if(!game.user.isGM)return;
-				class Achievement{
-				constructor(name, description, image, players, campaign = "", adventure = "", chapter = ""){
-					this.name = name;
-					this.description = description;
-					this.image = image;
-					this.players = players;
-					this.campaign = campaign;
-					this.adventure = adventure;
-					this.chapter = chapter;
-				}
-			}
-			console.log("SettingACH");
-			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-			let len = +AchievementData.length+1;
-			let newAch = new Achievement("Achievement "+len, "", game.settings.get('farchievements', 'standarticon'), [], "", "", "");
-			AchievementData.push(newAch);
-			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
+			if (!game.user.isGM) return;
+			const len = window.PF2eAchievements.AchievementStore.getDefinitions().length + 1;
+			await window.PF2eAchievements.AchievementStore.createAchievement({
+				name: `Achievement ${len}`,
+				description: "",
+				image: game.settings.get('farchievements', 'standarticon'),
+				secret: false,
+				campaign: "", adventure: "", chapter: ""
+			});
 			loadAchievementsEditMode();
 		}
-				async function setAchievementImg(achievementname) {
-		if(!game.user.isGM)return;
-			//console.log(achievementname);
-			//console.log(document.getElementById("EditIcon"+achievementname));
-			let icon = document.getElementById("achievementimg" + achievementname).value;
-			let input = document.getElementById("achievementimg" + achievementname);
-
+		async function setAchievementImg(achievementId) {
+			if (!game.user.isGM) return;
+			const input = document.getElementById(`achievement-image-${achievementId}`);
+			let icon = input.value;
 			if (icon.includes("http")) icon = "";
-			let imagePath;
-			new FilePicker({
-				type: "image",
-				displayMode: "tiles",
-				current: icon,
-				callback: imagePath => { input.value = imagePath; updateAchievement(2, achievementname); }
+			new FilePicker({ type: "image", displayMode: "tiles", current: icon,
+				callback: imagePath => { input.value = imagePath; updateAchievement(2, achievementId); }
 			}).browse(icon);
 		}
 		async function toggleListMode(){
@@ -1594,89 +1571,32 @@
 				},
 			}, dialogOptions).render(true);
 		}
-		async function updateAchievement(updateType, achievementname) {
-			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-			let reload = false;
-
-			// Helper function to remove control characters from strings
-			function sanitizeInput(input) {
-				return input.replace(/[\u0000-\u001F\u007F]/g, '').trim();
-			}
-
-			if (updateType === 1) { // NAME
-				let newName = sanitizeInput(document.getElementById('achievementname' + achievementname).value);
-				if (AchievementData.find(ach => ach.name == newName)) {
-					ui.notifications.warn("Farchievements | There is already an existing Achievement with the same name, added a number.");
-					var number = AchievementData.filter(ach => ach.name.includes(newName.split("(")[0])).length;
-					newName += "(" + number + ")";
-				}
-				AchievementData.filter(x => x.name == achievementname)[0].name = newName;
-				reload = true;
-			}
-
-			if (updateType === 2) { // ICON
-				AchievementData.filter(x => x.name == achievementname)[0].image = document.getElementById('achievementimg' + achievementname).value;
-				document.getElementById("EditIcon" + achievementname).src = document.getElementById('achievementimg' + achievementname).value;
-			}
-
-			if (updateType === 3) { // DESCRIPTION
-				let newDescription = sanitizeInput(document.getElementById('achievementdes' + achievementname).value);
-				AchievementData.filter(x => x.name == achievementname)[0].description = newDescription;
-			}
-
-			if (updateType === 4) { // POINTS
-				AchievementData.filter(x => x.name == achievementname)[0].points = document.getElementById('achievementPoints' + achievementname).value;
-			}
-
-			if (updateType === 5) { // GLOWING CHECKBOX
-				AchievementData.filter(x => x.name == achievementname)[0].glowing = document.getElementById('glowCheck' + achievementname).checked;
-			}
-
-			if (updateType === 6) { // COLOR
-				AchievementData.filter(x => x.name == achievementname)[0].color = document.getElementById('farchievementsColorPicker' + achievementname).value;
-			}
-
-			if (updateType === 7) { // PROGRESS REQUIRED
-				AchievementData.filter(x => x.name == achievementname)[0].progressRequired = document.getElementById('achievementProgressRequired' + achievementname).value;
-			}
-
-			if (updateType === 8) { // PROGRESS TYPE
-				AchievementData.filter(x => x.name == achievementname)[0].progressType = document.getElementById('achievementProgressType' + achievementname).value;
-				reload = true;
-			}
-
-			if (updateType === 9) { // DICE TYPE
-				AchievementData.filter(x => x.name == achievementname)[0].diceType = document.getElementById('achievementDiceType' + achievementname).value;
-			}
-
-			if (updateType === 10) { // CHAIN LENGTH
-				AchievementData.filter(x => x.name == achievementname)[0].chainLength = document.getElementById('achievementChainLength' + achievementname).value;
-			}
-			if (updateType === 11) { // SECRET TOGGLE
-				AchievementData.filter(x => x.name == achievementname)[0].secret = document.getElementById('achievementSecret' + achievementname).checked;
-			}
-
-			if (updateType === 12) { // CAMPAIGN
-				let newCampaign = document.getElementById('achievementCampaign' + achievementname).value.trim();
-				AchievementData.filter(x => x.name == achievementname)[0].campaign = newCampaign;
-			}
-
-			if (updateType === 13) { // ADVENTURE
-				let newAdventure = document.getElementById('achievementAdventure' + achievementname).value.trim();
-				AchievementData.filter(x => x.name == achievementname)[0].adventure = newAdventure;
-			}
-
-			if (updateType === 14) { // CHAPTER
-				let newChapter = document.getElementById('achievementChapter' + achievementname).value.trim();
-				AchievementData.filter(x => x.name == achievementname)[0].chapter = newChapter;
-			}
-			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
-
-			if (reload) {
-				loadAchievementsEditMode(); // RELOAD ACHIEVEMENTS TO DISPLAY CHANGES
-			}
+		async function updateAchievement(updateType, achievementId) {
+			const fieldIds = {
+				1: ['name', 'achievement-name-', true], 2: ['image', 'achievement-image-'],
+				3: ['description', 'achievement-description-', true], 4: ['points', 'achievement-points-'],
+				5: ['glowing', 'achievement-glowing-', false, true], 6: ['color', 'achievement-color-'],
+				7: ['progressRequired', 'achievement-progress-required-'], 8: ['progressType', 'achievement-progress-type-'],
+				9: ['diceType', 'achievement-dice-type-'], 10: ['chainLength', 'achievement-chain-length-'],
+				11: ['secret', 'achievement-secret-', false, true], 12: ['campaign', 'achievement-campaign-', true],
+				13: ['adventure', 'achievement-adventure-', true], 14: ['chapter', 'achievement-chapter-', true]
+			};
+			const spec = fieldIds[updateType];
+			if (!spec) return false;
+			const input = document.getElementById(spec[1] + achievementId);
+			if (!input) return false;
+			let value = spec[3] ? input.checked : input.value;
+			if (spec[2] && typeof value === 'string') value = value.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+			const changes = {};
+			if (updateType === 7 || updateType === 8) {
+				const current = window.PF2eAchievements.AchievementStore.getDefinition(achievementId);
+				changes.progress = { ...current.progress, [updateType === 7 ? 'required' : 'type']: value };
+			} else changes[spec[0]] = value;
+			await window.PF2eAchievements.AchievementStore.updateAchievement(achievementId, changes);
+			if (updateType === 2) document.getElementById('achievement-edit-icon-' + achievementId).src = value;
+			if (updateType === 1 || updateType === 8) loadAchievementsEditMode();
+			return true;
 		}
-
 
 		async function ChangeLoadPerPage(){
 			await game.settings.set('farchievements', 'loadPerPage',document.getElementById('toLoadNumber').value);
