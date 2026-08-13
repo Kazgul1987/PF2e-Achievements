@@ -443,7 +443,7 @@ class AchievementsScreen extends Application {
 			try {
 				if (!achievementId) throw new Error('The achievement ID is missing.');
 
-				const achievementData = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+				const achievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 				if (!Array.isArray(achievementData)) throw new Error('Achievement data is not an array.');
 
 				const achievementIndex = achievementData.findIndex(achievement => achievement?.id === achievementId);
@@ -452,7 +452,7 @@ class AchievementsScreen extends Application {
 				button.disabled = true;
 				achievementData.splice(achievementIndex, 1);
 				try {
-					await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementData));
+					await window.PF2eAchievements.AchievementStore.saveLegacyView(achievementData);
 				} catch (error) {
 					console.error(`${moduleId} | Failed to save achievement data after deletion:`, error);
 					ui.notifications.error(game.i18n.localize('Farchievements.Notification.DeleteSaveFailed'));
@@ -544,7 +544,7 @@ class AchievementSync{
 		const achievementsToMark = achievementsGainedList.split("||||%%%||||").filter(Boolean);
 		await AchievementSync._markSeen(achievementsToMark);
 		
-		let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+		let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 		let achievementsToGain = achievementsGainedList.split("||||%%%||||");
 	
 		let showPopup = game.settings.get(settingsNamespace, 'EnableAchievementPopup');
@@ -615,7 +615,7 @@ class AchievementSync{
 		}
 		else{//IF USER IS PLAYER
 			//FOR EACH ACHIEVEMENT IF NOT IN CLIENTDATA PLAY ANIMATION AND ADD IT
-			let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+			let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let existingAchievements = await AchievementSync._getSeen();
 			let AchievementsToPlay = "";
 			
@@ -680,7 +680,7 @@ Hooks.on('renderSceneNavigation', async function() {
 		document.getElementById("notifications").innerHTML = el;
 });
 
-Hooks.on('createChatMessage', (chatMessage) => {
+Hooks.on('createChatMessage', async (chatMessage) => {
     if (!game.user.isGM) return;
 
     // Check if the chat message contains roll data
@@ -693,7 +693,7 @@ Hooks.on('createChatMessage', (chatMessage) => {
 
         console.log(`Farchievements | Roll detected in chat message for user: ${userId}, roll total: ${rolledValue}`);
 
-        let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+        let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
         console.log(`Farchievements | Loaded achievement list:`, achievementList);
 
         // Filter for achievements that have a progressType of 'dice' or 'diceChain'
@@ -823,7 +823,7 @@ Hooks.on('createChatMessage', (chatMessage) => {
 
                 // Update the achievement list in game settings
                 let updatedAchievementList = achievementList.map(a => (a.name === achievement.name ? achievement : a));
-                game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(updatedAchievementList));
+                void window.PF2eAchievements.AchievementStore.saveLegacyView(updatedAchievementList);
             }
         });
 
@@ -837,7 +837,16 @@ Hooks.on('createChatMessage', (chatMessage) => {
 Hooks.on('ready', async function() {
 	//START MIGRATION
 	if(game.user.isGM && game.settings.get(settingsNamespace, 'achievementdataNEW') == ""){
-		Farchievements.MigrateAchievements();
+		await Farchievements.MigrateAchievements();
+	}
+	if (game.user.isGM) {
+		try {
+			await window.PF2eAchievements.migrateAchievementSchema();
+		} catch (error) {
+			console.error(`${moduleId} | Achievement migration failed`, error);
+			ui.notifications.error("PF2e Achievements: Die Datenmigration ist fehlgeschlagen. Die Legacy-Daten wurden nicht verändert; Details stehen in der Konsole.", { permanent: true });
+			return;
+		}
 	}
 	//sync achievements
 	if(!game.user.isGM)
@@ -992,7 +1001,7 @@ window.Farchievements = class Farchievement{
 	static async RemoveAchievement(AchievementName, PlayerName) {
 		if (!game.user.isGM) return;
 	
-		let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW')); // Get the achievement list
+		let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView(); // Get the achievement list
 		let AchievementToRemove = achievementList.find(ach => ach.name === AchievementName); // Find the specific achievement
 		let PlayerID = game.users.getName(PlayerName).id; // Get the player ID
 	
@@ -1006,11 +1015,7 @@ window.Farchievements = class Farchievement{
 			return;
 		}
 	
-		// Call the removePlayer method to remove the player from the achievement
-		AchievementToRemove.removePlayer(PlayerID);
-	
-		// Save the updated achievement list back to the settings
-		game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(achievementList));
+		await window.PF2eAchievements.AchievementStore.lock(AchievementToRemove.id, PlayerID);
 	
 		ui.notifications.notify(`Achievement "${AchievementName}" removed from player "${PlayerName}".`);
 	}	
@@ -1078,11 +1083,11 @@ window.Farchievements = class Farchievement{
 
 	}
 	static async debugAchievements(){
-		return JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+		return window.PF2eAchievements.AchievementStore.getLegacyView();
 	}
 }
 window.Farchievements.DisplayAchievementPopup = function (achievementName, playerId = "") {
-    let achievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+    let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
     let achievement = achievementList.find(ach => ach.name === achievementName);
     
     if (!achievement) {
@@ -1171,7 +1176,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                     title: game.i18n.localize('Farchievements.Dialog.UnlockForAllTitle'),
                     content: game.i18n.format('Farchievements.Dialog.UnlockForAllContent', { achievement: achievement.name }),
                     yes: async () => {
-                        let updatedList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+                        let updatedList = window.PF2eAchievements.AchievementStore.getLegacyView();
                         let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
 
                         if (!updatedAchievement) {
@@ -1203,7 +1208,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                         targetUsers.forEach(user => achievementInstance.addPlayer(user.id));
 
                         let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
-                        await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(finalList));
+                        await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
                         SendSyncMessage();
                         ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForAll'));
                     }
@@ -1248,7 +1253,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                                     return;
                                 }
 
-                                let updatedList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+                                let updatedList = window.PF2eAchievements.AchievementStore.getLegacyView();
                                 let updatedAchievement = updatedList.find(ach => ach.name === achievementName);
 
                                 if (!updatedAchievement) {
@@ -1279,7 +1284,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                                 selectedIds.forEach(userId => achievementInstance.addPlayer(userId));
 
                                 let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
-                                await game.settings.set(settingsNamespace, 'achievementdataNEW', JSON.stringify(finalList));
+                                await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
                                 SendSyncMessage();
                                 ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForPlayers'));
                             }
@@ -1458,7 +1463,7 @@ async function removeAchievementFromCommand(achievementID, PID) {
 }
 async function displayMyNewAchievementInChat(newAchievements){
 	if(!game.settings.get(settingsNamespace, 'chatMessage')) return;
-	let AchievementList = JSON.parse(game.settings.get(settingsNamespace, 'achievementdataNEW'));
+	let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 	if (!Array.isArray(newAchievements)) {
 		if(newAchievements != ""){
 			if (newAchievements === "" || newAchievements === " ") return; // Skip empty or space strings

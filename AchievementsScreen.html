@@ -19,7 +19,7 @@
 			let achievementName = achievementElement.querySelector('.AchName')?.innerText.trim();
 			if (!achievementName) return;
 
-			let AchievementData = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let achievement = AchievementData.find(ach => ach.name === achievementName);
 
 			if (achievement && achievement.known !== "unknownAch") {
@@ -208,7 +208,7 @@
 		async function loadSearchAndSortAchievements() {
 			let AchievementData;
 			try {
-				AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+				AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 				if (!Array.isArray(AchievementData)) throw new Error("Achievement data is not an array");
 			} catch (e) {
 				console.error("Farchievements | Failed to load achievements data:", e);
@@ -219,7 +219,7 @@
 			let normalizedResult = normalizeAchievementData(AchievementData);
 			AchievementData = normalizedResult.data;
 			if (normalizedResult.updated) {
-				await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+				await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 			}
 
 			let searchValue = game.settings.get('farchievements', 'lastSearchTerm')?.toLowerCase().trim() || "";
@@ -890,7 +890,7 @@
 
 		}
 		async function updatePlayerProgress(achievementName, playerId, changeAmount) {
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let achievement = AchievementData.find(ach => ach.name === achievementName);
 			if (!achievement) return;
 			achievement = Object.assign(new Achievement(), achievement);
@@ -898,7 +898,7 @@
 			let updatedAchievementIndex = AchievementData.findIndex(ach => ach.name === achievementName);
 			AchievementData[updatedAchievementIndex] = achievement;
 
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 
 			loadAchievements();
 		}
@@ -941,7 +941,7 @@
 				return;
 			}
 			// RENDER USERS AND ACHIEVEMENTCOUNT
-			let AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let users = game.users;
 			let langScoreboard = game.i18n.localize('Farchievements.Html.Scoreboard');
 			document.getElementById('AchievementList').innerHTML += '<div class="ScoreboardTitle" style="color: #ffbb00;font-size: 30px;text-align: -webkit-center;background: #2e2600;solid #863c00;font-weight: bold; border-bottom:3px solid;"><i class="fa-duotone fa-trophy"></i> '+langScoreboard+'</div>';
@@ -1025,11 +1025,11 @@
 				console.error(e);
 				return;
 			}
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let normalizedResult = normalizeAchievementData(AchievementData);
 			AchievementData = normalizedResult.data;
 			if (normalizedResult.updated) {
-				await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+				await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 			}
 			loadPageNav(AchievementData);
 
@@ -1082,7 +1082,7 @@
 			let progressType = "standard"; // default value
 			let diceType = "d6"; // default dice type
 			let chainLength = 2; // default chain length
-			//AchievementList = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+			//AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 
 			// NEW CODE STARTS HERE
 			let load_amount = game.settings.get('farchievements', 'loadPerPage');
@@ -1315,7 +1315,7 @@
 		  e.stopPropagation(); // stops the browser from redirecting.
 		  console.log("HandleDropEvent | " + e.dataTransfer.getData("Name") + " -> " + e.target.children[2].firstElementChild.value);
 		  
-		  let AchievementData = JSON.parse(game.settings.get('farchievements', 'achievementdataNEW'));
+		  let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 
 		  let x_fromName = e.dataTransfer.getData("Name");
 		  var x_FromData = AchievementData.find(ach => ach.name == x_fromName);
@@ -1328,7 +1328,7 @@
 		  AchievementData[x_index] = y_toData;
 		  
 		  //SWITCH ACHIEVEMENT POSITIONS
-		  await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+		  await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 		  loadAchievementsEditMode();
 		  return false;
 		}
@@ -1364,7 +1364,7 @@
 			console.log("SettingACH");
 
 			let player = game.users.get(playerID);
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 
 			// Find the specific achievement to modify
 			let achievementIndex = AchievementData.findIndex(x => x.name === achievementname);
@@ -1388,7 +1388,7 @@
 			AchievementData[achievementIndex] = achievement;
 
 			// Save only the modified data back to game settings
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 
 			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") {
 				await game.settings.set('farchievements', 'loadSettingsForPlayer', playerID);
@@ -1413,11 +1413,11 @@
 				}
 			}
 			console.log("SettingACH");
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let len = +AchievementData.length+1;
 			let newAch = new Achievement("Achievement "+len, "", game.settings.get('farchievements', 'standarticon'), [], "", "", "");
 			AchievementData.push(newAch);
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 			loadAchievementsEditMode();
 		}
 				async function setAchievementImg(achievementname) {
@@ -1457,6 +1457,13 @@
 			return candidate;
 		}
 		async function appendAchievementsFromRaw(raw) {
+			try {
+				return await window.PF2eAchievements.importAchievements(raw, { behavior: "duplicate" });
+			} catch (error) {
+				console.error("PF2e-Achievements | Import failed", error);
+				throw new Error('invalidData');
+			}
+			/* Legacy implementation retained below only as unreachable documentation.
 			let parsedInput;
 
 			try {
@@ -1476,7 +1483,7 @@
 
 			let existingAchievements;
 			try {
-				existingAchievements = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+				existingAchievements = window.PF2eAchievements.AchievementStore.getLegacyView();
 			}
 			catch (error) {
 				existingAchievements = [];
@@ -1521,12 +1528,13 @@
 			}
 
 			let mergedAchievements = existingAchievements.concat(validImportedAchievements);
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(mergedAchievements));
+			await window.PF2eAchievements.AchievementStore.saveLegacyView(mergedAchievements);
 
 			return {
 				appended: validImportedAchievements.length,
 				skipped: skippedAchievements
 			};
+			*/
 		}
 		async function openAppendInputDialog(notificationPrefix) {
 			let $appendDialog = $('.ImportExportAppendWindow');
@@ -1580,7 +1588,7 @@
 				$dialog.remove();
 				//return;
 			}
-			let data = game.settings.get('farchievements', 'achievementdataNEW');
+			let data = JSON.stringify(window.PF2eAchievements.exportAchievements(), null, 2);
 			const dialogOptions = {
 				classes: ['dialog ImportExportWindow']
 			};
@@ -1604,38 +1612,27 @@
 						callback: async () => {
 							let inputElement = document.getElementById("ImportExportInput");
 							let raw = inputElement.value.trim();
-							let AchievementList;
 
 							if (!raw) {
 								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
 								return;
 							}
 
-							try {
-								AchievementList = JSON.parse(raw);
-							}
-							catch (error) {
-								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
-								return;
-							}
-
-							let normalizedResult = normalizeAchievementData(AchievementList);
-							AchievementList = normalizedResult.data;
-							if (AchievementList == "") {
-								ui.notifications.warn(notificationPrefix + game.i18n.localize('Farchievements.Notification.OverwriteWithNothing'));
-								return;
-							}
-							if (AchievementList.length <= 1) {
-								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
-								return;
-							}
 							if (inputElement.value == data) {
 								ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.NoChange'));
 								return;
 							}
 
-							let normalizedValue = JSON.stringify(AchievementList);
-							game.settings.set('farchievements', 'achievementdataNEW', normalizedValue);
+							try {
+								const parsed = window.PF2eAchievements.AchievementImporter.parse(raw);
+								const migrated = window.PF2eAchievements.AchievementImporter.migrate(parsed);
+								window.PF2eAchievements.AchievementImporter.validate(migrated);
+								await window.PF2eAchievements.AchievementStore.saveDefinitions(migrated.achievements);
+							} catch (error) {
+								console.error("PF2e-Achievements | Import failed", error);
+								ui.notifications.error(notificationPrefix + game.i18n.localize('Farchievements.Notification.InvalidData'));
+								return;
+							}
 							ui.notifications.notify(notificationPrefix + game.i18n.localize('Farchievements.Notification.Overwritten'));
 							let $dialog = $('.achievementsscreen-window');
 							$dialog.remove();
@@ -1655,7 +1652,7 @@
 			}, dialogOptions).render(true);
 		}
 		async function updateAchievement(updateType, achievementname) {
-			let AchievementData = JSON.parse(await game.settings.get('farchievements', 'achievementdataNEW'));
+			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let reload = false;
 
 			// Helper function to remove control characters from strings
@@ -1730,7 +1727,7 @@
 				let newChapter = document.getElementById('achievementChapter' + achievementname).value.trim();
 				AchievementData.filter(x => x.name == achievementname)[0].chapter = newChapter;
 			}
-			await game.settings.set('farchievements', 'achievementdataNEW', JSON.stringify(AchievementData));
+			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
 
 			if (reload) {
 				loadAchievementsEditMode(); // RELOAD ACHIEVEMENTS TO DISPLAY CHANGES
