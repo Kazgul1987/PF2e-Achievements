@@ -1,3 +1,5 @@
+import { createAchievementsGainedPayload, getAchievementIdsFromPayload, getRuntimeAchievement, displayMyNewAchievementInChat as displayAchievementChatById } from "./scripts/achievement-runtime.js";
+
 const moduleId = "PF2e-Achievements";
 const modulePath = `modules/${moduleId}`;
 const settingsNamespace = "farchievements";
@@ -510,21 +512,28 @@ class AchievementSync{
 	  return new Promise(resolve => setTimeout(resolve, ms));
 	}
 	static async _getSeen(){
+		const store = window.PF2eAchievements.AchievementStore;
 		// Prefer a server-side per-user flag (persists across world restarts and different browsers)
 		let seen = await game.user.getFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG);
-		if (Array.isArray(seen)) return seen;
+		if (Array.isArray(seen)) {
+			const ids = seen.map(reference => store.resolveAchievementId(reference)).filter(Boolean);
+			if (ids.length !== seen.length || ids.some((id, index) => id !== seen[index]))
+				await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, ids);
+			return ids;
+		}
 		// One-time migration from legacy client setting (string)
 		const legacy = game.settings.get(settingsNamespace, 'clientdata');
 		if (typeof legacy === 'string' && legacy.length) {
-			seen = legacy.split('||||%%%||||').filter(Boolean);
+			seen = legacy.split('||||%%%||||').filter(Boolean)
+				.map(reference => store.resolveAchievementId(reference)).filter(Boolean);
 			await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, seen);
 			return seen;
 		}
 		await game.user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
 		return [];
 	}
-	static async _markSeen(names){
-		const list = (names ?? []).filter(Boolean);
+	static async _markSeen(achievementIds){
+		const list = (achievementIds ?? []).filter(Boolean);
 		if (!list.length) return;
 		const existing = await AchievementSync._getSeen();
 		const merged = Array.from(new Set([...existing, ...list]));
@@ -534,28 +543,27 @@ class AchievementSync{
 			await game.settings.set(settingsNamespace, 'clientdata', merged.join('||||%%%||||') + '||||%%%||||');
 		} catch (err) { /* ignore */ }
 	}
-	static async PlayAnimation(achievementsGainedList) {
+	static async PlayAnimation(payload) {
+		const store = window.PF2eAchievements.AchievementStore;
+		const achievementIdsToGain = getAchievementIdsFromPayload(payload, store);
 		// Mark as "seen" immediately to avoid replay on reconnect/reload
-		const achievementsToMark = achievementsGainedList.split("||||%%%||||").filter(Boolean);
-		await AchievementSync._markSeen(achievementsToMark);
-		
-		let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
-		let achievementsToGain = achievementsGainedList.split("||||%%%||||");
+		await AchievementSync._markSeen(achievementIdsToGain);
 	
 		let showPopup = game.settings.get(settingsNamespace, 'EnableAchievementPopup');
 		let disableBanner = game.settings.get(settingsNamespace, 'DisableAchievementBanner');
 		
-		for (let i = 0; i < achievementsToGain.length; i++) {
+		for (const achievementId of achievementIdsToGain) {
 			await AchievementSync.sleep(100);
-	
-			let AchievementToGain = AchievementList.find(ach => ach.name == achievementsToGain[i]);
-			if (AchievementToGain == null) return;
-	
-			displayMyNewAchievementInChat(AchievementToGain.name);
+			const AchievementToGain = store.getDefinition(achievementId);
+			if (!AchievementToGain) {
+				console.warn(`${moduleId} | Cannot play achievement animation; unknown achievement ID`, achievementId);
+				continue;
+			}
+			await displayMyNewAchievementInChat(achievementId);
 	
 			// Show Popup if enabled
 			if (showPopup) {
-				Farchievements.DisplayAchievementPopup(AchievementToGain.id);
+				Farchievements.DisplayAchievementPopup(achievementId);
 			}
 	
 			// Skip banner if disabled
@@ -612,20 +620,19 @@ class AchievementSync{
 			//FOR EACH ACHIEVEMENT IF NOT IN CLIENTDATA PLAY ANIMATION AND ADD IT
 			let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
 			let existingAchievements = await AchievementSync._getSeen();
-			let AchievementsToPlay = "";
+			const achievementIdsToPlay = [];
 			
 			AchievementList.forEach(function (achievement, index) {
 				if (achievement.players && achievement.players.includes(game.user.id)) {
-					if (existingAchievements.includes(achievement.name)) return;
-					AchievementsToPlay += achievement.name + "||||%%%||||";
+					if (existingAchievements.includes(achievement.id)) return;
+					achievementIdsToPlay.push(achievement.id);
 				}
 			});
-			//console.log(AchievementsToPlay);
-			if(AchievementsToPlay != ""){
-				let amount = AchievementsToPlay.split("||||%%%||||").length -1;
+			if(achievementIdsToPlay.length){
+				const payload = createAchievementsGainedPayload(achievementIdsToPlay, game.user.id);
+				let amount = achievementIdsToPlay.length;
 				if(skip == true){
-					const names = AchievementsToPlay.split("||||%%%||||").filter(Boolean);
-					await AchievementSync._markSeen(names);
+					await AchievementSync._markSeen(achievementIdsToPlay);
 					return;
 				}
 				if(start && amount > 0){
@@ -636,14 +643,13 @@ class AchievementSync{
 							one: {
 								icon: '<i class="fas fa-check"></i>',
 								label: `${game.i18n.localize('Farchievements.Html.SanitySaver.ButtonSeeAll')}`,
-								callback: () => AchievementSync.PlayAnimation(AchievementsToPlay)
+								callback: () => AchievementSync.PlayAnimation(payload)
 							},
 							two: {
 								icon: '<i class="fas fa-times"></i>',
 								label: `${game.i18n.localize('Farchievements.Html.SanitySaver.ButtonSkip')}`,
 								callback: async () => {
-									const names = AchievementsToPlay.split("||||%%%||||").filter(Boolean);
-									await AchievementSync._markSeen(names);
+									await AchievementSync._markSeen(achievementIdsToPlay);
 								}
 							}
 						}
@@ -651,7 +657,7 @@ class AchievementSync{
 					d.render(true);
 				}
 				else{
-					AchievementSync.PlayAnimation(AchievementsToPlay);
+					AchievementSync.PlayAnimation(payload);
 				}
 			}
 			//PLAY LIST AS ANIMATION 
@@ -827,10 +833,9 @@ window.Farchievements = class Farchievement{
 		if(!game.user.isGM) return false;
 		const player = game.users.getName(PlayerName);
 		if (!player) { ui.notifications.warn(`Player "${PlayerName}" not found.`); return false; }
-		const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === AchievementName);
-		if (!matches.length) { ui.notifications.warn(`Achievement "${AchievementName}" not found.`); return false; }
-		if (matches.length > 1) { ui.notifications.warn(`Achievement name "${AchievementName}" is ambiguous. Use the achievement ID instead.`); return false; }
-		return this.unlock(matches[0].id, player.id);
+		const achievementId = window.PF2eAchievements.AchievementStore.resolveAchievementId(AchievementName);
+		if (!achievementId) { ui.notifications.warn(`Achievement "${AchievementName}" was not uniquely resolved.`); return false; }
+		return this.unlock(achievementId, player.id);
 	}
 	static async unlock(achievementId, userId) {
 		if (!game.user.isGM) return false;
@@ -853,9 +858,9 @@ window.Farchievements = class Farchievement{
 	
 		const player = game.users.getName(PlayerName);
 		if (!player) { ui.notifications.warn(`Player "${PlayerName}" not found.`); return false; }
-		const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === AchievementName);
-		if (matches.length !== 1) { ui.notifications.warn(matches.length ? `Achievement name "${AchievementName}" is ambiguous. Use the achievement ID instead.` : `Achievement "${AchievementName}" not found.`); return false; }
-		await this.lock(matches[0].id, player.id);
+		const achievementId = window.PF2eAchievements.AchievementStore.resolveAchievementId(AchievementName);
+		if (!achievementId) { ui.notifications.warn(`Achievement "${AchievementName}" was not uniquely resolved.`); return false; }
+		await this.lock(achievementId, player.id);
 	
 		ui.notifications.notify(`Achievement "${AchievementName}" removed from player "${PlayerName}".`);
 		return true;
@@ -928,12 +933,12 @@ window.Farchievements = class Farchievement{
 	}
 }
 window.Farchievements.DisplayAchievementPopup = function (achievementId, playerId = "") {
-    const definition = window.PF2eAchievements.AchievementStore.getDefinition(achievementId);
+    const definition = getRuntimeAchievement(achievementId, window.PF2eAchievements.AchievementStore, console.warn, "display achievement popup");
     if (!definition) {
         ui.notifications.warn(`Farchievements | Achievement ID '${achievementId}' not found.`);
         return false;
     }
-    const achievement = window.PF2eAchievements.AchievementStore.getLegacyView().find(item => item.id === achievementId);
+    const achievement = definition;
     const player = playerId ? game.users.get(playerId) : game.user;
     if (!player) {
         ui.notifications.warn(`Farchievements | Player with ID '${playerId}' not found.`);
@@ -1013,7 +1018,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementId, playerI
                     content: game.i18n.format('Farchievements.Dialog.UnlockForAllContent', { achievement: achievement.name }),
                     yes: async () => {
                         if (!window.PF2eAchievements.AchievementStore.getDefinition(achievement.id)) {
-                            ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
+                            ui.notifications.warn(`Farchievements | Achievement ID '${achievement.id}' not found.`);
                             return;
                         }
                         const targetIds = game.users.filter(user => !user.isGM).map(user => user.id);
@@ -1063,7 +1068,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementId, playerI
                                 }
 
                                 if (!window.PF2eAchievements.AchievementStore.getDefinition(achievement.id)) {
-                                    ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
+                                    ui.notifications.warn(`Farchievements | Achievement ID '${achievement.id}' not found.`);
                                     return;
                                 }
                                 const validIds = selectedIds.filter(userId => game.users.get(userId) && !game.users.get(userId).isGM);
@@ -1091,13 +1096,11 @@ window.Farchievements.DisplayAchievementPopup = function (achievementId, playerI
 
 function resolveCommandAchievement(supplied) {
 	const definitions = window.PF2eAchievements.AchievementStore.getDefinitions();
-	const byId = definitions.find(item => item.id === supplied);
-	if (byId) return byId;
+	const id = window.PF2eAchievements.AchievementStore.resolveAchievementId(supplied);
+	if (id) return window.PF2eAchievements.AchievementStore.getDefinition(id);
 	// Compatibility: the historical public command accepted a name or zero-based index.
 	if (Number.isInteger(Number(supplied)) && definitions[Number(supplied)]) return definitions[Number(supplied)];
-	const matches = definitions.filter(item => item.name === supplied);
-	if (matches.length > 1) throw new Error(`Farchievements | Ambiguous achievement name "${supplied}"; use an ID.`);
-	return matches[0];
+	return undefined;
 }
 async function addAchievementFromCommand(achievementId, userId) {
 	const user = game.users.get(userId);
@@ -1115,35 +1118,12 @@ async function removeAchievementFromCommand(achievementId, userId) {
 	await window.PF2eAchievements.AchievementStore.lock(achievement.id, user.id);
 	SendSyncMessage();
 }
-async function displayMyNewAchievementInChat(newAchievements){
-	if(!game.settings.get(settingsNamespace, 'chatMessage')) return;
-	let AchievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
-	if (!Array.isArray(newAchievements)) {
-		if(newAchievements != ""){
-			if (newAchievements === "" || newAchievements === " ") return; // Skip empty or space strings
-			console.log("Achievement to display:", newAchievements);
-			let achievementData = AchievementList.find(x=>x.name == newAchievements);
-			let displayContent = '<p class="achGainedChatText">Achievement Gained:</p>'+ '<div class="AchievementChatDisplay"><img class="chatAchImg" src="'+achievementData.image+'"></img><b class="achNameChatP">'+newAchievements+'<b/> </div>';
-
-			ChatMessage.create({
-				content: displayContent,
-				blind: false,
-			});
-		}
-        return;
-    }
-
-    newAchievements.forEach(achievement => {
-        if (achievement === "" || achievement === " ") return; // Skip empty or space strings
-        console.log("Achievement to display:", achievement);
-		let achievementData = AchievementList.find(x=>x.name == achievement);
-		let displayContent = '<p class="achGainedChatText">Achievement Gained:</p>'+ '<div class="AchievementChatDisplay"><img class="chatAchImg" src="'+achievementData.image+'"></img><b class="achNameChatP">'+achievement+'<b/> </div>';
-
-        ChatMessage.create({
-            content: displayContent,
-            blind: false,
-        });
-    });
+async function displayMyNewAchievementInChat(achievementId){
+	return displayAchievementChatById(achievementId, {
+		store: window.PF2eAchievements.AchievementStore,
+		chatMessage: ChatMessage,
+		enabled: game.settings.get(settingsNamespace, 'chatMessage')
+	});
 }
 
 Hooks.on("renderChatMessage", (chatMessage, html, data) => {
@@ -1354,10 +1334,7 @@ class Achievement {
 
 /** Explicit compatibility adapter for legacy name-based macros. */
 window.Farchievements.DisplayAchievementPopupByName = function (achievementName, playerId = "") {
-    const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === achievementName);
-    if (matches.length !== 1) {
-        ui.notifications.warn(matches.length ? `Farchievements | Achievement name '${achievementName}' is ambiguous.` : `Farchievements | Achievement '${achievementName}' not found.`);
-        return false;
-    }
-    return window.Farchievements.DisplayAchievementPopup(matches[0].id, playerId);
+    const achievementId = window.PF2eAchievements.AchievementStore.resolveAchievementId(achievementName);
+    if (!achievementId) { ui.notifications.warn(`Farchievements | Achievement '${achievementName}' was not uniquely resolved.`); return false; }
+    return window.Farchievements.DisplayAchievementPopup(achievementId, playerId);
 };

@@ -21,6 +21,7 @@ globalThis.game = {
 };
 
 const model = await import("../scripts/achievement-data.js");
+const runtime = await import("../scripts/achievement-runtime.js");
 registrations.forEach(callback => callback());
 
 test("migration preserves the union of legacy player data and is idempotent", async () => {
@@ -290,4 +291,58 @@ test("duplicate names remain independent for update and delete by ID", async () 
   assert.equal(model.AchievementStore.getDefinition("id-a"), undefined);
   assert.equal(model.AchievementStore.getDefinition("id-b").name, "Lucky");
   assert.equal(model.AchievementStore.getState()["id-a"], undefined);
+});
+
+test("legacy achievement resolver prefers IDs and rejects ambiguous names", async () => {
+  await model.AchievementStore.saveDefinitions([
+    { id: "id-a", name: "Lucky" }, { id: "id-b", name: "Lucky" }, { id: "unique", name: "Only One" }
+  ]);
+  assert.equal(model.AchievementStore.resolveAchievementId("id-b"), "id-b");
+  assert.equal(model.AchievementStore.resolveAchievementId("Only One"), "unique");
+  assert.equal(model.AchievementStore.resolveAchievementId("Lucky"), null);
+  assert.equal(model.AchievementStore.resolveAchievementId("missing"), null);
+});
+
+test("runtime chat uses the requested duplicate-name ID and handles unknown IDs", async () => {
+  await model.AchievementStore.saveDefinitions([
+    { id: "id-a", name: "Lucky", image: "a.webp" },
+    { id: "id-b", name: "Lucky", image: "b.webp", description: "B" }
+  ]);
+  const messages = [];
+  const chatMessage = { create: async data => messages.push(data) };
+  assert.equal(await runtime.displayMyNewAchievementInChat("id-b", { store: model.AchievementStore, chatMessage }), true);
+  assert.match(messages[0].content, /b\.webp/);
+  assert.doesNotMatch(messages[0].content, /a\.webp/);
+  assert.equal(await runtime.displayMyNewAchievementInChat("missing", { store: model.AchievementStore, chatMessage, warn: () => {} }), false);
+  assert.equal(messages.length, 1);
+});
+
+test("runtime popup lookup selects the requested duplicate-name ID and safely rejects missing IDs", async () => {
+  await model.AchievementStore.saveDefinitions([
+    { id: "id-a", name: "Lucky", description: "A" }, { id: "id-b", name: "Lucky", description: "B" }
+  ]);
+  assert.equal(runtime.getRuntimeAchievement("id-b", model.AchievementStore).description, "B");
+  assert.equal(runtime.getRuntimeAchievement("missing", model.AchievementStore, () => {}, "display achievement popup"), null);
+});
+
+test("structured sync payload transports ordered IDs and consumer resolves directly", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "id-a", name: "Lucky" }, { id: "id-b", name: "Lucky" }]);
+  await model.AchievementStore.saveState({ "id-b": { players: { u: { unlocked: true } } } });
+  const definitionsBefore = model.AchievementStore.getDefinitions();
+  const stateBefore = model.AchievementStore.getState();
+  const payload = runtime.createAchievementsGainedPayload(["id-b", "id-a"], "u");
+  assert.deepEqual(payload, { type: "achievementsGained", achievementIds: ["id-b", "id-a"], userId: "u" });
+  assert.equal(JSON.stringify(payload).includes("Lucky"), false);
+  const received = [];
+  assert.deepEqual(await runtime.consumeAchievementsGained(payload, model.AchievementStore, id => received.push(id)), ["id-b", "id-a"]);
+  assert.deepEqual(received, ["id-b", "id-a"]);
+  assert.deepEqual(model.AchievementStore.getDefinitions(), definitionsBefore);
+  assert.deepEqual(model.AchievementStore.getState(), stateBefore);
+});
+
+test("legacy sync payload accepts only uniquely resolvable names", async () => {
+  await model.AchievementStore.saveDefinitions([
+    { id: "id-a", name: "Lucky" }, { id: "id-b", name: "Lucky" }, { id: "boss", name: "Boss Killer" }
+  ]);
+  assert.deepEqual(runtime.getAchievementIdsFromPayload("Boss Killer||||%%%||||Lucky", model.AchievementStore), ["boss"]);
 });
