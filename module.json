@@ -4,7 +4,7 @@
 	"description": "Achievements for FoundryVTT",
 	"version": "14.06",
 	"author": "Handyfon",
-	"esmodules": ["scripts/achievement-data.js", "AchievementsScreen.js"],
+	"esmodules": ["scripts/achievement-data.js", "scripts/achievement-runtime.js", "AchievementsScreen.js"],
 	"styles": ["AchievementsScreen.css"],
 	"packs": [],
 	"socket": true,

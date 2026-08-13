@@ -106,6 +106,16 @@ export class AchievementStore {
   }
   static getDefinitions() { return clone(game.settings.get(SETTINGS_NAMESPACE, "achievementDefinitions") ?? []); }
   static getDefinition(id) { return this.getDefinitions().find(item => item.id === id); }
+  /** Resolve an ID, or an unambiguous legacy name, without guessing. */
+  static resolveAchievementId(reference) {
+    if (typeof reference !== "string" || !reference) return null;
+    if (this.getDefinition(reference)) return reference;
+    const matches = this.getDefinitions().filter(item => item.name === reference);
+    if (matches.length === 1) return matches[0].id;
+    const reason = matches.length > 1 ? "Ambiguous legacy achievement name" : "Unknown achievement reference";
+    console.warn(`${MODULE_ID} | ${reason}`, reference);
+    return null;
+  }
   static getState() { return clone(game.settings.get(SETTINGS_NAMESPACE, "achievementState") ?? {}); }
   static getAchievementState(id) { return this.getState()[id] ?? { players: {} }; }
   static getPlayerState(id, userId) { return this.getAchievementState(id).players?.[userId] ?? { unlocked: false, seen: false, unlockedAt: null, progress: 0 }; }
