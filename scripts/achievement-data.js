@@ -52,6 +52,22 @@ function toState(achievement = {}) {
   return { players };
 }
 
+function definitionSignature(achievement = {}) {
+  const definition = toDefinition(achievement, "signature");
+  delete definition.id;
+  return JSON.stringify(definition);
+}
+
+function rollMatches(condition, value) {
+  if (typeof condition !== "string" && typeof condition !== "number") return false;
+  const text = String(condition).trim();
+  const target = Number.parseInt(text.replace(/^[<>]/, "").trim(), 10);
+  if (!Number.isFinite(target)) return false;
+  if (text.startsWith("<")) return value < target;
+  if (text.startsWith(">")) return value > target;
+  return value === target;
+}
+
 export function validateMigration(legacy, definitions, state) {
   const fail = detail => { throw new Error(`Achievement migration validation failed: ${detail}`); };
   if (!Array.isArray(legacy) || !Array.isArray(definitions) || legacy.length !== definitions.length) fail("achievement count differs");
@@ -80,6 +96,12 @@ export function validateMigration(legacy, definitions, state) {
 }
 
 export class AchievementStore {
+  static _writeQueue = Promise.resolve();
+  static _enqueue(operation) {
+    const result = this._writeQueue.then(operation, operation);
+    this._writeQueue = result.catch(() => {});
+    return result;
+  }
   static getDefinitions() { return clone(game.settings.get(SETTINGS_NAMESPACE, "achievementDefinitions") ?? []); }
   static getDefinition(id) { return this.getDefinitions().find(item => item.id === id); }
   static getState() { return clone(game.settings.get(SETTINGS_NAMESPACE, "achievementState") ?? {}); }
@@ -104,21 +126,61 @@ export class AchievementStore {
     await this.saveDefinitions(this.getDefinitions().filter(item => item.id !== id));
     const state = this.getState(); delete state[id]; await this.saveState(state);
   }
+  static async resetAll() {
+    await this.saveDefinitions([]);
+    await this.saveState({});
+    await game.settings.set(SETTINGS_NAMESPACE, "achievementSchemaVersion", 1);
+  }
   static async _changePlayer(id, userId, changes) {
-    if (!this.getDefinition(id)) throw new Error(`Unknown achievement ${id}`);
-    const state = this.getState();
-    state[id] ??= { players: {} }; state[id].players ??= {};
-    state[id].players[userId] = { ...this.getPlayerState(id, userId), ...changes };
-    await this.saveState(state); return state[id].players[userId];
+    return this._enqueue(async () => {
+      if (!this.getDefinition(id)) throw new Error(`Unknown achievement ${id}`);
+      const state = this.getState();
+      state[id] ??= { players: {} }; state[id].players ??= {};
+      const current = state[id].players[userId] ?? { unlocked: false, seen: false, unlockedAt: null, progress: 0 };
+      state[id].players[userId] = { ...current, ...(typeof changes === "function" ? changes(current) : changes) };
+      await this.saveState(state); return state[id].players[userId];
+    });
   }
   static unlock(id, userId) {
-    const current = this.getPlayerState(id, userId);
-    return this._changePlayer(id, userId, { unlocked: true, unlockedAt: current.unlocked ? current.unlockedAt ?? Date.now() : Date.now() });
+    return this._changePlayer(id, userId, current => ({ unlocked: true, unlockedAt: current.unlocked ? current.unlockedAt ?? Date.now() : Date.now() }));
   }
   static lock(id, userId) { return this._changePlayer(id, userId, { unlocked: false, seen: false, unlockedAt: null }); }
   static setSeen(id, userId, seen = true) { return this._changePlayer(id, userId, { seen: Boolean(seen) }); }
   static setProgress(id, userId, progress) { return this._changePlayer(id, userId, { progress: Number(progress) || 0 }); }
-  static incrementProgress(id, userId, amount = 1) { return this.setProgress(id, userId, this.getPlayerState(id, userId).progress + amount); }
+  static incrementProgress(id, userId, amount = 1) { return this._changePlayer(id, userId, current => ({ progress: (Number(current.progress) || 0) + amount })); }
+  static async unlockMany(id, userIds) {
+    const uniqueIds = [...new Set(userIds)].filter(userId => typeof userId === "string" && userId.length);
+    for (const userId of uniqueIds) await this.unlock(id, userId);
+    return uniqueIds.length;
+  }
+  static processDiceRoll({ formula = "", total, natural } = {}, userId) {
+    return this._enqueue(async () => {
+      const definitions = this.getDefinitions();
+      const state = this.getState();
+      const unlocked = [];
+      for (const definition of definitions) {
+        if (!["dice", "diceChain"].includes(definition.progress.type) || !String(formula).includes(definition.diceType)) continue;
+        state[definition.id] ??= { players: {} }; state[definition.id].players ??= {};
+        const current = state[definition.id].players[userId] ?? { unlocked: false, seen: false, unlockedAt: null, progress: 0 };
+        if (current.unlocked) continue;
+        const rolledValue = Number.isFinite(natural) ? natural : total;
+        const success = rollMatches(definition.progress.required, rolledValue);
+        if (definition.progress.type === "dice" && success) {
+          state[definition.id].players[userId] = { ...current, unlocked: true, unlockedAt: Date.now() };
+          unlocked.push(definition.id);
+        } else if (definition.progress.type === "diceChain") {
+          const progress = success ? (Number(current.progress) || 0) + 1 : 0;
+          const required = Number(definition.chainLength) || Number(definition.progress.required) || 1;
+          const complete = progress >= required;
+          state[definition.id].players[userId] = { ...current, progress: complete ? required : progress,
+            unlocked: complete, unlockedAt: complete ? Date.now() : current.unlockedAt };
+          if (complete) unlocked.push(definition.id);
+        }
+      }
+      await this.saveState(state);
+      return { unlocked };
+    });
+  }
   static getLegacyView() {
     const state = this.getState();
     return this.getDefinitions().map(definition => {
@@ -133,10 +195,25 @@ export class AchievementStore {
   }
   static async saveLegacyView(achievements) {
     const oldState = this.getState(); const oldDefinitions = this.getDefinitions(); const definitions = []; const state = {};
-    for (const [index, achievement] of achievements.entries()) {
-      // Compatibility callers sometimes rebuild an Achievement instance and
-      // thereby drop its id. Preserve the id at the same list position.
-      const id = achievement.id ?? oldDefinitions[index]?.id ?? randomID(); definitions.push(toDefinition(achievement, id));
+    const idsBySignature = new Map();
+    for (const definition of oldDefinitions) {
+      const signature = definitionSignature(definition);
+      const matches = idsBySignature.get(signature) ?? [];
+      matches.push(definition.id); idsBySignature.set(signature, matches);
+    }
+    const usedIds = new Set();
+    for (const achievement of achievements) {
+      let id = achievement.id;
+      if (!id) {
+        const candidates = (idsBySignature.get(definitionSignature(achievement)) ?? []).filter(candidate => !usedIds.has(candidate));
+        if (candidates.length === 1) id = candidates[0];
+        else {
+          id = randomID();
+          console.warn(`${MODULE_ID} | Could not safely resolve legacy achievement ID; generated a new ID`, achievement);
+        }
+      }
+      if (usedIds.has(id)) throw new Error(`Duplicate achievement ID in legacy view: ${id}`);
+      usedIds.add(id); definitions.push(toDefinition(achievement, id));
       state[id] = toState(achievement);
       for (const [userId, value] of Object.entries(oldState[id]?.players ?? {})) state[id].players[userId] ??= value;
     }
@@ -147,6 +224,8 @@ export class AchievementStore {
 export class AchievementImporter {
   static parse(raw) {
     let data = typeof raw === "string" ? JSON.parse(raw) : clone(raw);
+    // Legacy array entries without IDs cannot reliably be matched across repeated
+    // imports and are therefore treated as new achievements.
     if (Array.isArray(data)) data = { format: PACK_FORMAT, version: 0, meta: { migratedFrom: "legacy-array" }, achievements: data };
     if (!data || typeof data !== "object") throw new Error("Invalid achievement import");
     return data;
@@ -180,9 +259,9 @@ export class AchievementImporter {
     if (!["skip", "update", "duplicate", "overwrite"].includes(behavior)) throw new Error(`Unknown merge behavior ${behavior}`);
     if (behavior === "overwrite") {
       await AchievementStore.saveDefinitions(pack.achievements);
-      const validIds = new Set(pack.achievements.map(item => item.id));
-      const state = pack.worldBackup ? clone(pack.state ?? {}) : Object.fromEntries(Object.entries(AchievementStore.getState()).filter(([id]) => validIds.has(id)));
-      await AchievementStore.saveState(state);
+      // Definition-only packs must never replace or prune world state. Only an
+      // explicitly requested world backup is allowed to restore runtime data.
+      if (pack.worldBackup) await AchievementStore.saveState(clone(pack.state ?? {}));
       return { imported: pack.achievements.length, skipped: 0 };
     }
     const definitions = AchievementStore.getDefinitions(); const byId = new Map(definitions.map((item, index) => [item.id, index]));
