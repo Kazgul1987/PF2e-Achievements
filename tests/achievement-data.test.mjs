@@ -60,3 +60,85 @@ test("legacy array imports remain supported", async () => {
   assert.equal(result.imported, 1);
   assert.ok(values.get("achievementDefinitions").some(item => item.name === "Legacy Pack Entry" && item.id));
 });
+
+test("delimiter migration is awaited before schema v2 and preserves unlocks", async () => {
+  values.set("achievementDefinitions", []); values.set("achievementState", {}); values.set("achievementSchemaVersion", 1);
+  values.set("achievementdataNEW", "");
+  values.set("achievementdata", "1:::First////one.webp////One;;;2:::Second////two.webp////Two;;;");
+  values.set("clientdataSYNC", "user-a:0,||user-b:1,");
+  let writeFinished = false;
+  const originalSet = game.settings.set;
+  game.settings.set = async (namespace, key, value) => {
+    if (key === "achievementdataNEW") await new Promise(resolve => setTimeout(resolve, 20));
+    const result = await originalSet(namespace, key, value);
+    if (key === "achievementdataNEW") writeFinished = true;
+    if (key === "achievementDefinitions") assert.equal(writeFinished, true);
+    return result;
+  };
+  try { assert.equal(await model.migrateAchievements(), true); } finally { game.settings.set = originalSet; }
+  const definitions = values.get("achievementDefinitions");
+  assert.equal(definitions.length, 2);
+  assert.equal(values.get("achievementState")[definitions[0].id].players["user-a"].unlocked, true);
+  assert.equal(values.get("achievementState")[definitions[1].id].players["user-b"].unlocked, true);
+  assert.equal(values.get("achievementSchemaVersion"), 2);
+});
+
+test("failed delimiter write never advances schema version or changes legacy data", async () => {
+  values.set("achievementDefinitions", []); values.set("achievementState", {}); values.set("achievementSchemaVersion", 1);
+  values.set("achievementdataNEW", ""); values.set("achievementdata", "1:::Safe////safe.webp////Still here;;;"); values.set("clientdataSYNC", "");
+  const originalSet = game.settings.set;
+  game.settings.set = async (namespace, key, value) => { if (key === "achievementdataNEW") throw new Error("disk full"); return originalSet(namespace, key, value); };
+  try { await assert.rejects(model.migrateAchievements(), /disk full/); } finally { game.settings.set = originalSet; }
+  assert.equal(values.get("achievementSchemaVersion"), 1);
+  assert.equal(values.get("achievementdata"), "1:::Safe////safe.webp////Still here;;;");
+});
+
+test("store mutations use IDs, preserve repeat-unlock time, and reset time after lock", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "A1", name: "Secret Found" }, { id: "A2", name: "Secret Found" }]);
+  await model.AchievementStore.saveState({});
+  const first = await model.AchievementStore.unlock("A1", "user");
+  await new Promise(resolve => setTimeout(resolve, 2));
+  const repeated = await model.AchievementStore.unlock("A1", "user");
+  assert.equal(repeated.unlockedAt, first.unlockedAt);
+  await model.AchievementStore.setProgress("A2", "user", 7);
+  assert.equal(model.AchievementStore.getPlayerState("A1", "user").progress, 0);
+  assert.equal(model.AchievementStore.getPlayerState("A2", "user").progress, 7);
+  await model.AchievementStore.lock("A1", "user");
+  assert.equal(model.AchievementStore.getPlayerState("A1", "user").unlockedAt, null);
+  const unlockedAgain = await model.AchievementStore.unlock("A1", "user");
+  assert.notEqual(unlockedAgain.unlockedAt, null);
+});
+
+test("import rejects foreign formats and future versions without changing data", async () => {
+  const before = structuredClone(values.get("achievementDefinitions"));
+  await assert.rejects(model.importAchievements({ format: "other", version: 1, achievements: [] }), /Unsupported achievement pack format/);
+  await assert.rejects(model.importAchievements({ format: "pf2e-achievements", version: 999, achievements: [] }), /Unsupported achievement pack version 999/);
+  assert.deepEqual(values.get("achievementDefinitions"), before);
+});
+
+test("overwrite prunes orphan state but keeps state for retained IDs", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "A", name: "A" }, { id: "B", name: "B" }]);
+  await model.AchievementStore.saveState({ A: { players: { u: { unlocked: true } } }, B: { players: {} } });
+  const result = await model.importAchievements({ format: "pf2e-achievements", version: 1, achievements: [{ id: "A", name: "Updated" }, { id: "C", name: "C" }] }, { behavior: "overwrite" });
+  assert.equal(result.imported, 2);
+  assert.deepEqual(Object.keys(values.get("achievementState")), ["A"]);
+  assert.equal(values.get("achievementState").A.players.u.unlocked, true);
+});
+
+test("legacy seen names migrate only when unique and survive renames by ID", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "seen-id", name: "Lucky" }, { id: "d1", name: "Duplicate" }, { id: "d2", name: "Duplicate" }]);
+  await model.AchievementStore.saveState({});
+  const user = { id: "u", getFlag: async () => ["Lucky", "Duplicate"] };
+  await model.migrateLegacySeenFlags([user]);
+  assert.equal(model.AchievementStore.getPlayerState("seen-id", "u").seen, true);
+  assert.equal(model.AchievementStore.getPlayerState("d1", "u").seen, false);
+  await model.AchievementStore.updateAchievement("seen-id", { name: "Renamed" });
+  assert.equal(model.AchievementStore.getPlayerState("seen-id", "u").seen, true);
+});
+
+test("pagination source sees definitions imported after initial render", async () => {
+  await model.AchievementStore.saveDefinitions(Array.from({ length: 100 }, (_, index) => ({ id: `old-${index}`, name: `Old ${index}` })));
+  const pack = { format: "pf2e-achievements", version: 1, achievements: Array.from({ length: 50 }, (_, index) => ({ id: `new-${index}`, name: `New ${index}` })) };
+  await model.importAchievements(pack, { behavior: "duplicate" });
+  assert.equal(model.AchievementStore.getDefinitions().length, 150);
+});

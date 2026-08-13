@@ -822,7 +822,7 @@ Hooks.on('createChatMessage', async (chatMessage) => {
                 }
 
                 // Update the achievement list in game settings
-                let updatedAchievementList = achievementList.map(a => (a.name === achievement.name ? achievement : a));
+                let updatedAchievementList = achievementList.map(a => (a.id === achievement.id ? achievement : a));
                 void window.PF2eAchievements.AchievementStore.saveLegacyView(updatedAchievementList);
             }
         });
@@ -836,12 +836,10 @@ Hooks.on('createChatMessage', async (chatMessage) => {
 
 Hooks.on('ready', async function() {
 	//START MIGRATION
-	if(game.user.isGM && game.settings.get(settingsNamespace, 'achievementdataNEW') == ""){
-		await Farchievements.MigrateAchievements();
-	}
 	if (game.user.isGM) {
 		try {
-			await window.PF2eAchievements.migrateAchievementSchema();
+			await window.PF2eAchievements.migrateAchievements();
+			await window.PF2eAchievements.migrateLegacySeenFlags();
 		} catch (error) {
 			console.error(`${moduleId} | Achievement migration failed`, error);
 			ui.notifications.error("PF2e Achievements: Die Datenmigration ist fehlgeschlagen. Die Legacy-Daten wurden nicht verändert; Details stehen in der Konsole.", { permanent: true });
@@ -902,50 +900,19 @@ Hooks.on("createChatMessage", async function (message){
 	AchievementSync.SyncAchievements();
 
 if(message.content.includes("Farchievements-SyncRequest")){
-	if(!game.user.isGM)return;
-	let NAME = message.content.split("|")[1];
-	let ACHIEVMENTNAME = message.content.split("|")[2];
-	//==========================================
-	let achData = game.settings.get(settingsNamespace, 'achievementdata').split(';;;');
-	let dataArray = game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
-	let Player, achievementID, dataArrayPlayer, toSYNC, PID;
-	if(NAME != "")
-	Player = game.users.getName(NAME);
-	else{
-	Player = game.user;
-	}
-	if(Player == null){
+	if (!game.user.isGM) return;
+	const [, playerName = "", suppliedName = ""] = message.content.split("|");
+	const player = playerName ? game.users.getName(playerName) : game.user;
+	if (!player) {
 		ui.notifications.error(game.i18n.localize('Farchievements.Notification.Prefix') + game.i18n.localize('Farchievements.Notification.UserDoesNotExist'));
 		return;
 	}
-	PID = dataArray.indexOf(dataArray.filter(entry => entry.includes(Player.id))[0]);
-	achievementID = achData.filter(entry => entry.split("////")[0].includes(ACHIEVMENTNAME))[0][0];
-	if(dataArray[PID] == "" || dataArray[PID] == null){ // IF NO DATA YET
-				dataArrayPlayer = game.users._source[PID].id + ":" + achievementID + ",";
-				dataArray[PID] = dataArrayPlayer;
-				toSYNC = dataArray.join("||");
-				console.log(toSYNC);
-				//await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-
-				console.log("Setting Achievement: " + achievementname + "(ID:"+ achievementID + ")" + " for user: " + playerName);
-				return;
+	try {
+		await addAchievementFromCommand(suppliedName, player.id);
+	} catch (error) {
+		console.error(`${moduleId} | Sync request failed`, error);
+		ui.notifications.error(error.message);
 	}
-	else{
-		dataArrayPlayer = dataArray[PID].split(":")[0] + ":" + dataArray[PID].split(":")[1] + achievementID + ",";
-		dataArray[PID] = dataArrayPlayer;
-		toSYNC = dataArray.join("||");
-		console.log(toSYNC);
-	}
-	await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-
-	ChatMessage.create({
-		user : game.user.id,
-		content: 'Achievements Synced',
-		blind: false,
-		whisper : game.users.entities.filter(u => u.isGM).map(u => u.id)
-	});
-	ui.notifications.notify('Achievements Synced');
-	AchievementSync.SyncAchievements();
 }});
 window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
 	if(!game.user.isGM) return;
@@ -1078,7 +1045,7 @@ window.Farchievements = class Farchievement{
 		let data = JSON.stringify(AchievementList);
 		//console.log(data);
 		//let TestData = JSON.parse(data);
-		game.settings.set(settingsNamespace, 'achievementdataNEW', data);
+		await game.settings.set(settingsNamespace, 'achievementdataNEW', data);
 		await ui.notifications.notify("Farchievements | Migration Finished");
 
 	}
@@ -1207,7 +1174,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
                         let targetUsers = game.users.filter(user => !user.isGM);
                         targetUsers.forEach(user => achievementInstance.addPlayer(user.id));
 
-                        let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
+                        let finalList = updatedList.map(ach => (ach.id === achievementInstance.id ? achievementInstance : ach));
                         await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
                         SendSyncMessage();
                         ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForAll'));
@@ -1283,7 +1250,7 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
 
                                 selectedIds.forEach(userId => achievementInstance.addPlayer(userId));
 
-                                let finalList = updatedList.map(ach => (ach.name === achievementInstance.name ? achievementInstance : ach));
+                                let finalList = updatedList.map(ach => (ach.id === achievementInstance.id ? achievementInstance : ach));
                                 await window.PF2eAchievements.AchievementStore.saveLegacyView(finalList);
                                 SendSyncMessage();
                                 ui.notifications.notify(game.i18n.localize('Farchievements.Notification.UnlockForPlayers'));
@@ -1306,160 +1273,31 @@ window.Farchievements.DisplayAchievementPopup = function (achievementName, playe
 };
 
 
-async function addAchievementFromCommand(achievementID, PID) {
-			let cleanPlayerID = game.users.contents.indexOf(game.users.get(PID)) - 1;
-			let dataPlayerID = cleanPlayerID; //++xathick
-			let player = game.users.get(PID);
-			let playerName = player.name;
-			let clientdataSYNC = game.settings.get(settingsNamespace, 'clientdataSYNC'); //GET DATA
-			let dataArray = clientdataSYNC.split("||"); //DATA TO ARRAY
-			let dataArrayPlayer; //DATA TO ARRAY
-			let toSYNC;
-			let index = 0;
-			for (index; index < dataArray.length; index++) {
-				if (dataArray[index].split(":")[0] == PID) {
-					dataPlayerID = index;
-				}
-				game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
-			}
-			if (dataArray[dataPlayerID] == "" || dataArray[dataPlayerID] == 'NULL') { // IF NO DATA YET ADD ACHIEVEMENT
-				dataArrayPlayer = game.users.contents[dataPlayerID]._id + ":" + achievementID + ",";
-				dataArray[dataPlayerID] = dataArrayPlayer; //++xathick
-				toSYNC = dataArray.join("||");
-				await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-				if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
-				{
-					await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
-					$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
-					loadAchievements();
-				}
-				else
-					loadAchievementsEditMode();
-				return;
-			}
-
-			if (dataArray[dataPlayerID].split(":")[1].includes(',' + "" + achievementID + ',')) { //DETECT EXISTING ACHIEVEMENT, SKIP REST
-				ui.notifications.notify("Farchievements | This player already has the achievement");
-				return;
-			}
-			else if (dataArray[dataPlayerID].split(":")[1].split(",")[0] == "" + achievementID) { //FIRST ACHIEVEMENT IN DATA? => CHECK AGAIN SPECIAL FORMATTING
-				ui.notifications.notify("Farchievements | This player already has the achievement");
-				return;
-			}
-			else if (dataArray[dataPlayerID].split(":")[1].split(",")[dataArray[dataPlayerID].split(":")[1].split(",")[0].length + 1] == "" + achievementID) { //LAST ACHIEVEMENT IN DATA? => SPECIAL FORMATTING
-				let toReplace = achievementID + ",";//REPLACE FIRST ENTRY IN DATA
-				var firstDataArray = dataArray[dataPlayerID].split(":")[1].split(",");
-				firstDataArray.pop();
-				dataArray[dataPlayerID] = dataArray[dataPlayerID].split(":")[0] + ":" + firstDataArray;
-				toSYNC = dataArray.join("||");
-			}
-			else {//IF IT DOESN'T EXIST ON THIS PLAYER YET, ADD THE ACHIEVEMENT
-				dataArrayPlayer = dataArray[dataPlayerID].split(":")[0] + ":" + dataArray[dataPlayerID].split(":")[1] + achievementID + ",";
-				dataArray[dataPlayerID] = dataArrayPlayer;
-				toSYNC = dataArray.join("||");
-			}
-			if (document.getElementById('SyncAchUnsaved') != null) {
-				if (document.getElementById('SyncAchUnsaved').value == toSYNC) {
-					document.getElementById('SyncAchUnsaved').id = "SyncAch";
-					document.getElementById('SyncAch').value = "";
-				}
-			}
-			if (document.getElementById('SyncAch') != null) {
-				document.getElementById('SyncAch').value = toSYNC;
-				document.getElementById('SyncAch').id = "SyncAchUnsaved";
-			}
-
-			await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-			SendSyncMessage();
-			//RELOAD ANY OPEN WINDOW
-			if(document.getElementById('AchPlayerNav') == null) return;
-			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
-			{
-				await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
-				$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
-				window.loadAchievements();
-			}
-			else
-				window.loadAchievementsEditMode();
+function resolveCommandAchievement(supplied) {
+	const definitions = window.PF2eAchievements.AchievementStore.getDefinitions();
+	const byId = definitions.find(item => item.id === supplied);
+	if (byId) return byId;
+	// Compatibility: the historical public command accepted a name or zero-based index.
+	if (Number.isInteger(Number(supplied)) && definitions[Number(supplied)]) return definitions[Number(supplied)];
+	const matches = definitions.filter(item => item.name === supplied);
+	if (matches.length > 1) throw new Error(`Farchievements | Ambiguous achievement name "${supplied}"; use an ID.`);
+	return matches[0];
 }
-async function removeAchievementFromCommand(achievementID, PID) {
-			let cleanPlayerID = game.users.contents.indexOf(game.users.get(PID)) - 1;
-			let dataPlayerID = cleanPlayerID; //++xathick
-			let player = game.users.get(PID);
-			let playerName = player.name;
-			let clientdataSYNC = game.settings.get(settingsNamespace, 'clientdataSYNC'); //GET DATA
-			let dataArray = clientdataSYNC.split("||"); //DATA TO ARRAY
-			let dataArrayPlayer; //DATA TO ARRAY
-			let toSYNC;
-			let index = 0;
-			for (index; index < dataArray.length; index++) {
-				if (dataArray[index].split(":")[0] == PID) {
-					dataPlayerID = index;
-				}
-				game.settings.get(settingsNamespace, 'clientdataSYNC').split("||");
-			}
-			if (dataArray[dataPlayerID] == "" || dataArray[dataPlayerID] == 'NULL') { // IF NO DATA YET ADD ACHIEVEMENT
-				dataArrayPlayer = game.users.contents[dataPlayerID]._id + ":" + achievementID + ",";
-				dataArray[dataPlayerID] = dataArrayPlayer; //++xathick
-				toSYNC = dataArray.join("||");
-				await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-				if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
-				{
-					await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
-					$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
-					loadAchievements();
-				}
-				else
-					loadAchievementsEditMode();
-				return;
-			}
-
-			if (dataArray[dataPlayerID].split(":")[1].includes(',' + "" + achievementID + ',')) { //DETECT EXISTING ACHIEVEMENT, REMOVE IT
-				let toReplace = achievementID + ",";//REPLACE FROM WITHIN DATA
-				dataArrayPlayer = dataArray[dataPlayerID].split(":")[0] + ":" + dataArray[dataPlayerID].split(":")[1].replace(toReplace, "");
-				dataArray[dataPlayerID] = dataArrayPlayer;
-				toSYNC = dataArray.join("||");
-				//console.log(toSYNC);
-			}
-			else if (dataArray[dataPlayerID].split(":")[1].split(",")[0] == "" + achievementID) { //FIRST ACHIEVEMENT IN DATA?
-				let toReplace = achievementID + ",";//REPLACE FIRST ENTRY IN DATA
-				var firstDataArray = dataArray[dataPlayerID].split(":")[1].split(",");
-				firstDataArray.shift();
-				dataArray[dataPlayerID] = dataArray[dataPlayerID].split(":")[0] + ":" + firstDataArray;
-				toSYNC = dataArray.join("||");
-				//console.log(toSYNC);
-			}
-			else if (dataArray[dataPlayerID].split(":")[1].split(",")[dataArray[dataPlayerID].split(":")[1].split(",")[0].length + 1] == "" + achievementID) { //LAST ACHIEVEMENT IN DATA?
-				let toReplace = achievementID + ",";//REPLACE FIRST ENTRY IN DATA
-				var firstDataArray = dataArray[dataPlayerID].split(":")[1].split(",");
-				firstDataArray.pop();
-				dataArray[dataPlayerID] = dataArray[dataPlayerID].split(":")[0] + ":" + firstDataArray;
-				toSYNC = dataArray.join("||");
-				//console.log(toSYNC);
-			}
-			if (document.getElementById('SyncAchUnsaved') != null) {
-				if (document.getElementById('SyncAchUnsaved').value == toSYNC) {
-					document.getElementById('SyncAchUnsaved').id = "SyncAch";
-					document.getElementById('SyncAch').value = "";
-				}
-			}
-			if (document.getElementById('SyncAch') != null) {
-				document.getElementById('SyncAch').value = toSYNC;
-				document.getElementById('SyncAch').id = "SyncAchUnsaved";
-			}
-
-			await game.settings.set(settingsNamespace, 'clientdataSYNC', toSYNC);
-			SendSyncMessage();
-			//RELOAD ANY OPEN WINDOW
-			if(document.getElementById('AchPlayerNav') == null) return;
-			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") //CHECK FOR EDITING WITHIN NORMAL WINDOW
-			{
-				await game.settings.set(settingsNamespace, 'loadSettingsForPlayer', PID);
-				$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
-				window.loadAchievements();
-			}
-			else
-				window.loadAchievementsEditMode();
+async function addAchievementFromCommand(achievementId, userId) {
+	const user = game.users.get(userId);
+	if (!user) throw new Error(`Farchievements | Unknown user ${userId}`);
+	const achievement = resolveCommandAchievement(achievementId);
+	if (!achievement) throw new Error(`Farchievements | Unknown achievement ${achievementId}`);
+	await window.PF2eAchievements.AchievementStore.unlock(achievement.id, user.id);
+	SendSyncMessage();
+}
+async function removeAchievementFromCommand(achievementId, userId) {
+	const user = game.users.get(userId);
+	if (!user) throw new Error(`Farchievements | Unknown user ${userId}`);
+	const achievement = resolveCommandAchievement(achievementId);
+	if (!achievement) throw new Error(`Farchievements | Unknown achievement ${achievementId}`);
+	await window.PF2eAchievements.AchievementStore.lock(achievement.id, user.id);
+	SendSyncMessage();
 }
 async function displayMyNewAchievementInChat(newAchievements){
 	if(!game.settings.get(settingsNamespace, 'chatMessage')) return;
