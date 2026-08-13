@@ -197,12 +197,49 @@ test("saveLegacyView safely matches reordered id-less entries rather than using 
   assert.equal(model.AchievementStore.getPlayerState("A", "u").unlockedAt, 42);
 });
 
-test("debug reset clears definitions and state and restores the migration start version", async () => {
+test("empty debug reset clears definitions and state without enabling legacy remigration", async () => {
   await model.AchievementStore.saveDefinitions([{ id: "reset-me", name: "Reset" }]);
   await model.AchievementStore.unlock("reset-me", "u");
   values.set("achievementSchemaVersion", 2);
   await model.AchievementStore.resetAll();
   assert.deepEqual(values.get("achievementDefinitions"), []);
   assert.deepEqual(values.get("achievementState"), {});
-  assert.equal(values.get("achievementSchemaVersion"), 1);
+  assert.equal(values.get("achievementSchemaVersion"), 2);
+  values.set("achievementdataNEW", JSON.stringify([{ name: "Must not return" }]));
+  assert.equal(await model.migrateAchievementSchema(), false);
+  assert.deepEqual(model.AchievementStore.getDefinitions(), []);
+});
+
+test("lock is lossless for progress, seen, other users, definitions, and extension fields", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "lock-id", name: "Lock" }]);
+  await model.AchievementStore.saveState({ "lock-id": { players: {
+    one: { unlocked: true, unlockedAt: 42, seen: true, progress: 7, extension: "keep" },
+    two: { unlocked: true, unlockedAt: 9, seen: false, progress: 2 }
+  } } });
+  const definitions = model.AchievementStore.getDefinitions();
+  await model.AchievementStore.lock("lock-id", "one");
+  assert.deepEqual(model.AchievementStore.getPlayerState("lock-id", "one"), { unlocked: false, unlockedAt: null, seen: true, progress: 7, extension: "keep" });
+  assert.equal(model.AchievementStore.getPlayerState("lock-id", "two").unlocked, true);
+  assert.deepEqual(model.AchievementStore.getDefinitions(), definitions);
+});
+
+test("progress is ID-specific, non-negative, capped, and never mutates definitions", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "p-a", name: "Same", progressRequired: 5 }, { id: "p-b", name: "Same", progressRequired: 10 }]);
+  await model.AchievementStore.saveState({ "p-b": { players: { other: { progress: 4 } } } });
+  const definitions = model.AchievementStore.getDefinitions();
+  await model.AchievementStore.incrementProgress("p-a", "user", 99);
+  assert.equal(model.AchievementStore.getPlayerState("p-a", "user").progress, 5);
+  await model.AchievementStore.incrementProgress("p-a", "user", -99);
+  assert.equal(model.AchievementStore.getPlayerState("p-a", "user").progress, 0);
+  assert.equal(model.AchievementStore.getPlayerState("p-b", "other").progress, 4);
+  assert.deepEqual(model.AchievementStore.getDefinitions(), definitions);
+});
+
+test("reorder uses stable IDs and preserves world state", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "id-a", name: "A" }, { id: "id-b", name: "B" }, { id: "id-c", name: "C" }]);
+  await model.AchievementStore.saveState({ "id-a": { players: { u: { unlocked: true } } } });
+  const state = model.AchievementStore.getState();
+  await model.AchievementStore.reorder(["id-c", "id-a", "id-b"]);
+  assert.deepEqual(model.AchievementStore.getDefinitions().map(item => item.id), ["id-c", "id-a", "id-b"]);
+  assert.deepEqual(model.AchievementStore.getState(), state);
 });

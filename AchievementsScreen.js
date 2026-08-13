@@ -779,18 +779,32 @@ if(message.content.includes("Farchievements-SyncRequest")){
 		ui.notifications.error(error.message);
 	}
 }});
-window.farchievements_DEBUG_Reset_EVERYTHING = async function resetSettings(){
+window.farchievements_DEBUG_Reset_To_Defaults = async function resetToDefaults(){
 	if(!game.user.isGM) return;
 	await game.settings.set(settingsNamespace, 'achievementdata', "1:::Mounted////systems/dnd5e/icons/items/inventory/horseshoe.jpg////Acquire a mount.;;;2:::Translator////systems/dnd5e/icons/items/inventory/note-scroll.jpg////Act as the party translator.;;;3:::Argumenter////systems/dnd5e/icons/items/inventory/monster-beak.jpg////Argue with the DM over a dice roll.;;;4:::Bitte, Bitte Papa////systems/dnd5e/icons/items/inventory/runestone-dwarven.jpg////Ask a deity for a favor.;;;5:::Hardmode////icons/skills/wounds/injury-eyes-blood-red-pink.webp////Be deaf and blind simultaneously.;;;6:::You have no power here////systems/dnd5e/icons/skills/blood_12.jpg////Be ignored by the DM when citing rules.;;;7:::Special////systems/dnd5e/icons/skills/green_27.jpg////Be the only person to roll 20 at a session;;;8:::Actor////systems/dnd5e/icons/skills/emerald_07.jpg////Beat a performance check while in disguise;;;9:::Deiety////systems/dnd5e/icons/skills/yellow_13.jpg////Become deified.;;;10:::Brute////icons/magic/earth/barrier-stone-brown-green.webp////Burst through a wall.;;;11:::Ouch////https://assets.forge-vtt.com/5fa2d7054f8a4cf1b34c8a38/Icons/spellbook_page1/SpellBook08_13.png////Reach 0 HP twice in 1 encounter.;;;12:::Amazing Roleplayer////icons/skills/social/diplomacy-peace-alliance.webp////Roleplay your character exceptionally.;;;13:::(Un)advantage////icons/magic/control/voodoo-doll-pain-damage-purple.webp////Roll 2 1’s on an advantaged roll.;;;14:::Lucky////icons/magic/light/projectile-flare-blue.webp////Roll 2 20’s in a row.;;;15:::Never tell me the odds////icons/magic/control/buff-luck-fortune-clover-green.webp////Roll 2 20’s on a disadvantaged roll.;;;16:::Strongest in the Land////icons/skills/melee/unarmed-punch-fist.webp////Have a strength score over 20.;;;17:::Fastest in the Land////icons/magic/lightning/bolt-strike-cloud-gray.webp////Have a dexterity score over 20.;;;18:::Toughest in the Land////icons/magic/earth/strike-fist-stone-light.webp////Have a constitution score over 20.;;;19:::Smartest in the Land////icons/magic/control/silhouette-hold-beam-blue.webp////Have a intelligence score over 20.;;;20:::Wisest in the Land////icons/magic/nature/tree-elm-roots-brown.webp////Have a wisdom score over 20.;;;21:::The most Charming in the Land////icons/magic/unholy/strike-body-explode-disintegrate.webp////Have a charisma score over 20.;;;22:::I've nothing left to lose...////icons/magic/death/undead-skeleton-deformed-red.webp////...so the only path to choose is twisted. Be the sole survivor of a TPK;;;23:::Necromancer////icons/commodities/bones/bones-dragon-grey.webp////Raise the dead.;;;24:::Lorax////https://c.tenor.com/BzpCcZbxOAIAAAAd/lorax-the-lorax.gif////Speak for the trees;;;");
 	await game.settings.set(settingsNamespace, 'achievementdataNEW',"");
 	await game.settings.set(settingsNamespace, 'clientdataSYNC',"");
 	await game.settings.set(settingsNamespace, 'clientdata', "");
 	await window.PF2eAchievements.AchievementStore.resetAll();
+	await game.settings.set(settingsNamespace, 'achievementSchemaVersion', 1);
+	await window.PF2eAchievements.migrateAchievements();
 	// Also clear per-user "seen" flags
 	for (const u of game.users.contents) {
 		await u.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
 	}
 }
+window.farchievements_DEBUG_Reset_To_Empty = async function resetToEmpty(){
+	if(!game.user.isGM) return false;
+	await window.PF2eAchievements.AchievementStore.resetAll();
+	await game.settings.set(settingsNamespace, 'achievementdataNEW', "[]");
+	await game.settings.set(settingsNamespace, 'achievementdata', "");
+	await game.settings.set(settingsNamespace, 'clientdataSYNC', "");
+	await game.settings.set(settingsNamespace, 'clientdata', "");
+	for (const user of game.users.contents) await user.setFlag(moduleId, SEEN_ACHIEVEMENTS_FLAG, []);
+	return true;
+}
+// Historical debug macro explicitly retains its old "restore defaults" behavior.
+window.farchievements_DEBUG_Reset_EVERYTHING = window.farchievements_DEBUG_Reset_To_Defaults;
 window.farchievements_DEBUG_Reset_PlayerAchievements = async function resetPlayers(){
 	if(!game.user.isGM) return;
 	await game.settings.set(settingsNamespace, 'clientdataSYNC',"");
@@ -810,47 +824,41 @@ window.Farchievements = class Farchievement{
 		$("#SettingsAchievementsButton").click()
 	}
 	static async AddAchievement(AchievementName, PlayerName){
-		if(!game.user.isGM) return;
-		console.log(AchievementName);
-		let data = game.settings.get(settingsNamespace, 'achievementdata').split(';;;');
-		let AchievementID, PlayerID;
-		for(let i = 0; i < game.settings.get(settingsNamespace, 'achievementdata').split(';;;').length; i++){
-			if(AchievementName == game.settings.get(settingsNamespace, 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[1]){
-				AchievementID = game.settings.get(settingsNamespace, 'achievementdata').split(';;;')[i].split('////')[0].split(":::")[0] - 1;
-			}
-		}
-		PlayerID = game.users.getName(PlayerName).id;
-
-		if(PlayerID == null){
-			ui.notifications.warn("Farchievements | Is the player name right?")
-			return;
-		}
-		if(AchievementID == null){
-			ui.notifications.warn("Farchievements | Is the achievement name right?")
-			return;
-		}
-		addAchievementFromCommand(AchievementID, PlayerID);
+		if(!game.user.isGM) return false;
+		const player = game.users.getName(PlayerName);
+		if (!player) { ui.notifications.warn(`Player "${PlayerName}" not found.`); return false; }
+		const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === AchievementName);
+		if (!matches.length) { ui.notifications.warn(`Achievement "${AchievementName}" not found.`); return false; }
+		if (matches.length > 1) { ui.notifications.warn(`Achievement name "${AchievementName}" is ambiguous. Use the achievement ID instead.`); return false; }
+		return this.unlock(matches[0].id, player.id);
+	}
+	static async unlock(achievementId, userId) {
+		if (!game.user.isGM) return false;
+		if (typeof achievementId !== "string" || typeof userId !== "string") { ui.notifications.warn("Achievement ID and user ID must be strings."); return false; }
+		if (!window.PF2eAchievements.AchievementStore.getDefinition(achievementId)) { ui.notifications.warn(`Achievement "${achievementId}" not found.`); return false; }
+		if (!game.users.get(userId)) { ui.notifications.warn(`User "${userId}" not found.`); return false; }
+		await window.PF2eAchievements.AchievementStore.unlock(achievementId, userId);
+		return true;
+	}
+	static async lock(achievementId, userId) {
+		if (!game.user.isGM) return false;
+		if (typeof achievementId !== "string" || typeof userId !== "string") { ui.notifications.warn("Achievement ID and user ID must be strings."); return false; }
+		if (!window.PF2eAchievements.AchievementStore.getDefinition(achievementId)) { ui.notifications.warn(`Achievement "${achievementId}" not found.`); return false; }
+		if (!game.users.get(userId)) { ui.notifications.warn(`User "${userId}" not found.`); return false; }
+		await window.PF2eAchievements.AchievementStore.lock(achievementId, userId);
+		return true;
 	}
 	static async RemoveAchievement(AchievementName, PlayerName) {
 		if (!game.user.isGM) return;
 	
-		let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView(); // Get the achievement list
-		let AchievementToRemove = achievementList.find(ach => ach.name === AchievementName); // Find the specific achievement
-		let PlayerID = game.users.getName(PlayerName).id; // Get the player ID
-	
-		if (PlayerID == null) {
-			ui.notifications.warn("Farchievements | Is the player name correct?");
-			return;
-		}
-	
-		if (AchievementToRemove == null) {
-			ui.notifications.warn("Farchievements | Is the achievement name correct?");
-			return;
-		}
-	
-		await window.PF2eAchievements.AchievementStore.lock(AchievementToRemove.id, PlayerID);
+		const player = game.users.getName(PlayerName);
+		if (!player) { ui.notifications.warn(`Player "${PlayerName}" not found.`); return false; }
+		const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === AchievementName);
+		if (matches.length !== 1) { ui.notifications.warn(matches.length ? `Achievement name "${AchievementName}" is ambiguous. Use the achievement ID instead.` : `Achievement "${AchievementName}" not found.`); return false; }
+		await this.lock(matches[0].id, player.id);
 	
 		ui.notifications.notify(`Achievement "${AchievementName}" removed from player "${PlayerName}".`);
+		return true;
 	}	
 	static async MigrateAchievements(){
 		await ui.notifications.notify("Farchievements | Beginning migration of old data...");
