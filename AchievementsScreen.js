@@ -555,7 +555,7 @@ class AchievementSync{
 	
 			// Show Popup if enabled
 			if (showPopup) {
-				Farchievements.DisplayAchievementPopup(AchievementToGain.name);
+				Farchievements.DisplayAchievementPopup(AchievementToGain.id);
 			}
 	
 			// Skip banner if disabled
@@ -927,30 +927,25 @@ window.Farchievements = class Farchievement{
 		return window.PF2eAchievements.AchievementStore.getLegacyView();
 	}
 }
-window.Farchievements.DisplayAchievementPopup = function (achievementName, playerId = "") {
-    let achievementList = window.PF2eAchievements.AchievementStore.getLegacyView();
-    let achievement = achievementList.find(ach => ach.name === achievementName);
-    
-    if (!achievement) {
-        ui.notifications.warn(`Farchievements | Achievement '${achievementName}' not found.`);
-        return;
+window.Farchievements.DisplayAchievementPopup = function (achievementId, playerId = "") {
+    const definition = window.PF2eAchievements.AchievementStore.getDefinition(achievementId);
+    if (!definition) {
+        ui.notifications.warn(`Farchievements | Achievement ID '${achievementId}' not found.`);
+        return false;
     }
-
-    // If a playerId is provided, check if they are in the achievement's players list
-    let player = playerId ? game.users.get(playerId) : game.user;
+    const achievement = window.PF2eAchievements.AchievementStore.getLegacyView().find(item => item.id === achievementId);
+    const player = playerId ? game.users.get(playerId) : game.user;
     if (!player) {
         ui.notifications.warn(`Farchievements | Player with ID '${playerId}' not found.`);
-        return;
+        return false;
     }
-
-    // Ensure the player is actually in the achievement's players list
-    if (!achievement.players && !game.user.isGM && !achievement.players.includes(player.id) ) {
+    const playerState = window.PF2eAchievements.AchievementStore.getPlayerState(achievementId, player.id);
+    if (!playerState.unlocked && !game.user.isGM) {
         ui.notifications.warn(`Farchievements | Player '${player.name}' does not have this achievement.`);
-        return;
+        return false;
     }
-
-    let receivedDate = achievement.playerDates?.[player.id] ? new Date(achievement.playerDates[player.id]) : null;
-    let formattedDate = receivedDate
+    const receivedDate = playerState.unlockedAt ? new Date(playerState.unlockedAt) : null;
+    const formattedDate = receivedDate
         ? receivedDate.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
         : null;
 
@@ -1356,3 +1351,13 @@ class Achievement {
 		}
 	}
 }
+
+/** Explicit compatibility adapter for legacy name-based macros. */
+window.Farchievements.DisplayAchievementPopupByName = function (achievementName, playerId = "") {
+    const matches = window.PF2eAchievements.AchievementStore.getDefinitions().filter(item => item.name === achievementName);
+    if (matches.length !== 1) {
+        ui.notifications.warn(matches.length ? `Farchievements | Achievement name '${achievementName}' is ambiguous.` : `Farchievements | Achievement '${achievementName}' not found.`);
+        return false;
+    }
+    return window.Farchievements.DisplayAchievementPopup(matches[0].id, playerId);
+};

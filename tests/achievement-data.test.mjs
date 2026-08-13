@@ -243,3 +243,51 @@ test("reorder uses stable IDs and preserves world state", async () => {
   assert.deepEqual(model.AchievementStore.getDefinitions().map(item => item.id), ["id-c", "id-a", "id-b"]);
   assert.deepEqual(model.AchievementStore.getState(), state);
 });
+
+test("complete definition schema preserves secret through migration, create, update, and packs", async () => {
+  values.set("achievementDefinitions", []); values.set("achievementState", {}); values.set("achievementSchemaVersion", 1);
+  values.set("achievementdataNEW", JSON.stringify([{
+    name: "Hidden Test", description: "Legacy", image: "test.webp", points: 5,
+    glowing: true, color: "#ff0000", secret: true, progressRequired: 10,
+    progressType: "counter", chainLength: 3, diceType: "d20", campaign: "Campaign",
+    adventure: "Adventure", chapter: "1", players: ["user-1"], seenBy: ["user-1"],
+    playerProgress: { "user-1": 7 }
+  }]));
+  await model.migrateAchievementSchema();
+  const migrated = model.AchievementStore.getDefinitions()[0];
+  assert.equal(migrated.secret, true);
+  assert.deepEqual(model.AchievementStore.getPlayerState(migrated.id, "user-1"), {
+    unlocked: true, seen: true, unlockedAt: null, progress: 7
+  });
+
+  const stateBefore = structuredClone(model.AchievementStore.getState());
+  await model.AchievementStore.updateAchievement(migrated.id, { secret: false, players: ["intruder"], id: "changed" });
+  assert.equal(model.AchievementStore.getDefinition(migrated.id).secret, false);
+  assert.equal(model.AchievementStore.getDefinition("changed"), undefined);
+  assert.deepEqual(model.AchievementStore.getState(), stateBefore);
+
+  const source = { id: "roundtrip", name: "Boss #1: The End?", description: "All fields", image: "all.webp",
+    points: 9, glowing: true, color: "#123456", secret: true,
+    progress: { type: "diceChain", required: "20" }, chainLength: 4, diceType: "d20",
+    campaign: "C", adventure: "A", chapter: "Ch" };
+  const created = await model.AchievementStore.createAchievement(source);
+  assert.deepEqual(created, source);
+  await assert.rejects(model.AchievementStore.createAchievement(source), /Duplicate achievement ID/);
+  const pack = model.exportAchievements();
+  assert.equal(pack.state, undefined);
+  await model.AchievementStore.saveDefinitions([]);
+  await model.importAchievements(pack, { behavior: "overwrite" });
+  assert.deepEqual(model.AchievementStore.getDefinition("roundtrip"), source);
+});
+
+test("duplicate names remain independent for update and delete by ID", async () => {
+  await model.AchievementStore.saveDefinitions([{ id: "id-a", name: "Lucky" }, { id: "id-b", name: "Lucky" }]);
+  await model.AchievementStore.saveState({ "id-a": { players: { u: { unlocked: true } } }, "id-b": { players: {} } });
+  await model.AchievementStore.updateAchievement("id-b", { description: "only B" });
+  assert.equal(model.AchievementStore.getDefinition("id-a").description, "");
+  assert.equal(model.AchievementStore.getDefinition("id-b").description, "only B");
+  assert.equal(await model.AchievementStore.deleteAchievement("id-a", { deleteState: true }), true);
+  assert.equal(model.AchievementStore.getDefinition("id-a"), undefined);
+  assert.equal(model.AchievementStore.getDefinition("id-b").name, "Lucky");
+  assert.equal(model.AchievementStore.getState()["id-a"], undefined);
+});

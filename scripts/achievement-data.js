@@ -25,6 +25,7 @@ function toDefinition(achievement = {}, id = achievement.id ?? randomID()) {
     points: achievement.points ?? 1,
     glowing: achievement.glowing ?? false,
     color: achievement.color ?? "",
+    secret: Boolean(achievement.secret),
     progress: {
       type: achievement.progress?.type ?? achievement.progressType ?? "standard",
       required: achievement.progress?.required ?? achievement.progressRequired ?? 0
@@ -78,6 +79,7 @@ export function validateMigration(legacy, definitions, state) {
     ids.add(definition.id);
     if (definition.name !== (old.name ?? "")) fail(`name differs at ${index}`);
     if (definition.points !== (old.points ?? 1)) fail(`points differ at ${index}`);
+    if (definition.secret !== Boolean(old.secret)) fail(`secret differs at ${index}`);
     if (definition.progress?.type !== (old.progress?.type ?? old.progressType ?? "standard")) fail(`progress type differs at ${index}`);
     if (definition.progress?.required !== (old.progress?.required ?? old.progressRequired ?? 0)) fail(`required progress differs at ${index}`);
     const playerState = state?.[definition.id]?.players ?? {};
@@ -114,7 +116,15 @@ export class AchievementStore {
     return definitions;
   }
   static async saveState(value) { await game.settings.set(SETTINGS_NAMESPACE, "achievementState", clone(value)); return value; }
-  static async createAchievement(data) { const item = toDefinition(data); await this.saveDefinitions([...this.getDefinitions(), item]); return item; }
+  static async createAchievement(data = {}) {
+    const definitions = this.getDefinitions();
+    const id = data.id ?? randomID();
+    if (typeof id !== "string" || !id.trim()) throw new TypeError("Achievement ID must be a non-empty string");
+    if (definitions.some(item => item.id === id)) throw new Error(`Duplicate achievement ID: ${id}`);
+    const item = toDefinition(data, id);
+    await this.saveDefinitions([...definitions, item]);
+    return item;
+  }
   static async updateAchievement(id, changes) {
     const definitions = this.getDefinitions();
     const index = definitions.findIndex(item => item.id === id);
@@ -122,9 +132,12 @@ export class AchievementStore {
     definitions[index] = toDefinition(foundry.utils.mergeObject(definitions[index], changes, { inplace: false }), id);
     await this.saveDefinitions(definitions); return definitions[index];
   }
-  static async deleteAchievement(id) {
-    await this.saveDefinitions(this.getDefinitions().filter(item => item.id !== id));
-    const state = this.getState(); delete state[id]; await this.saveState(state);
+  static async deleteAchievement(id, { deleteState = true } = {}) {
+    const definitions = this.getDefinitions();
+    if (!definitions.some(item => item.id === id)) return false;
+    await this.saveDefinitions(definitions.filter(item => item.id !== id));
+    if (deleteState) { const state = this.getState(); delete state[id]; await this.saveState(state); }
+    return true;
   }
   static async resetAll() {
     await this.saveDefinitions([]);
@@ -220,9 +233,9 @@ export class AchievementStore {
     });
   }
   /**
-   * @deprecated Compatibility bridge for legacy UI code.
-   * New state mutations must use AchievementStore methods directly. New
-   * definition mutations should prefer create/update/delete/reorder APIs.
+   * @deprecated Legacy compatibility bridge.
+   * Do not use for new runtime mutations. Use AchievementStore
+   * create/update/delete/state APIs instead.
    */
   static async saveLegacyView(achievements) {
     const oldState = this.getState(); const oldDefinitions = this.getDefinitions(); const definitions = []; const state = {};
