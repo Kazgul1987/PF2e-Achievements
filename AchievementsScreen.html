@@ -674,15 +674,15 @@
 					// Add + and - buttons for GM to manually adjust progress for "count" type
 					if (game.user.isGM && achievement.progressType === "count") {
 						let gmControlHTML = `<div class="gmAchProgressControl">
-												<button class="achProgressControlButton" style="background:green;" onclick="updatePlayerProgress('${achievement.name}', '${playerID}', -1)">-</button>
-												<button class="achProgressControlButton" style="background:red;" onclick="updatePlayerProgress('${achievement.name}', '${playerID}', 1)">+</button>
+												<button class="achProgressControlButton" style="background:green;" onclick="updatePlayerProgress('${achievement.id}', '${playerID}', -1)">-</button>
+												<button class="achProgressControlButton" style="background:red;" onclick="updatePlayerProgress('${achievement.id}', '${playerID}', 1)">+</button>
 											</div>`;
 						progressBarHTML += gmControlHTML;
 					}
 				}
 			}
 
-				if (playerIDToLoadFrom != "" && achievement.progressType!="count") onClickFunction = 'oncontextmenu="setAchievement(`' + originname + '`,' + '\'' + playerIDToLoadFrom + '\')"';
+				if (playerIDToLoadFrom != "" && achievement.progressType!="count") onClickFunction = 'oncontextmenu="setAchievement(`' + achievement.id + '`,' + '\'' + playerIDToLoadFrom + '\')"';
 				const achievementCardHTML = `
 				<div ${onClickFunction} id="Achievement-${achievementIndex}" class="far-grid-item ${listView} ${known}" style="${greyscale} ${displayOptions} ${colorOptions} background:${color}; ${glowstyle}">
 					${AchName}
@@ -889,17 +889,8 @@
 			document.getElementById('sortAchievementsDropdown').value = game.settings.get('farchievements', 'lastSortType');
 
 		}
-		async function updatePlayerProgress(achievementName, playerId, changeAmount) {
-			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-			let achievement = AchievementData.find(ach => ach.name === achievementName);
-			if (!achievement) return;
-			achievement = Object.assign(new Achievement(), achievement);
-			achievement.addProgress(playerId, changeAmount);
-			let updatedAchievementIndex = AchievementData.findIndex(ach => ach.name === achievementName);
-			AchievementData[updatedAchievementIndex] = achievement;
-
-			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
-
+		async function updatePlayerProgress(achievementId, playerId, changeAmount) {
+			await window.PF2eAchievements.AchievementStore.incrementProgress(achievementId, playerId, changeAmount);
 			loadAchievements();
 		}
 		function hidePageNav(){
@@ -1165,12 +1156,12 @@
 
 					if (AchievementList[i] && Array.isArray(AchievementList[i].players)) {
 						if (AchievementList[i].players.includes(playerList[j].id)) {
-							labels += '<label class="AchEnableLabel playerHas" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + name + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
+							labels += '<label class="AchEnableLabel playerHas" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + AchievementList[i].id + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
 						} else {
-							labels += '<label class="AchEnableLabel" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + name + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
+							labels += '<label class="AchEnableLabel" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + AchievementList[i].id + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
 						}
 					} else {
-						labels += '<label class="AchEnableLabel" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + name + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
+						labels += '<label class="AchEnableLabel" id="AchEnableXX' + i + '/' + dataPlayerID + '" onclick="setAchievement(`' + AchievementList[i].id + '`,`' + playerList[j].id + '`)">' + playerList[j].name + '</label>';
 					}
 				}
 
@@ -1232,7 +1223,7 @@
 				progressHTML += `</div>`; // End progressHTML
 
 				document.getElementById('AchievementList').innerHTML += `
-					<div id="Achievement-${i}" class="far-grid-item">
+					<div id="Achievement-${i}" class="far-grid-item" data-achievement-id="${AchievementList[i].id}">
 						<div class="DragAndDropHandler" draggable="true"><i class="fa-solid fa-up-down-left-right"></i></div>
 						<div class="achievementtools">
 							<button class="deleteAchievement" type="button" data-achievement-id="${AchievementList[i].id}"><i class="fas fa-trash-alt"></i></button>
@@ -1289,17 +1280,9 @@
 
 
 		function handleDragStart(e) {
-		  e.stopPropagation(); // stops the browser from redirecting.
+		  e.stopPropagation();
 		  this.style.opacity = '0.4';
-		  let Elements = document.querySelectorAll("div.DragAndDropHandler, div.achievementtools, div.achEditName, div.achEditIcon, div.achEditInpImg, div.achEditInpDesc, div.achEditPoints");
-			  Elements.forEach(function(item) {
-				if(item != e.target)
-					item.style.setProperty("pointer-events", "none");
-		  });
-		  //DATA
-		  let el = e.srcElement.parentElement.children[2].firstElementChild.value;
-		  //console.log("Drag from: " + el);
-		  e.dataTransfer.setData("Name", e.srcElement.parentElement.children[2].firstElementChild.value);
+		  e.dataTransfer.setData("AchievementId", this.dataset.achievementId);
 		  return false;
 		}
 		function handleDragEnd(e) {
@@ -1312,23 +1295,15 @@
 		}
 
 		async function handleDrop(e) {
-		  e.stopPropagation(); // stops the browser from redirecting.
-		  console.log("HandleDropEvent | " + e.dataTransfer.getData("Name") + " -> " + e.target.children[2].firstElementChild.value);
-		  
-		  let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-
-		  let x_fromName = e.dataTransfer.getData("Name");
-		  var x_FromData = AchievementData.find(ach => ach.name == x_fromName);
-		  let y_toName = e.target.children[2].firstElementChild.value;
-		  var y_toData = AchievementData.find(ach => ach.name == y_toName);
-		  let y_index = AchievementData.findIndex(ach => ach.name == y_toName);
-		  let x_index = AchievementData.findIndex(ach => ach.name == x_fromName);
-		  
-		  AchievementData[y_index] = x_FromData;
-		  AchievementData[x_index] = y_toData;
-		  
-		  //SWITCH ACHIEVEMENT POSITIONS
-		  await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
+		  e.stopPropagation();
+		  const sourceId = e.dataTransfer.getData("AchievementId");
+		  const targetId = e.currentTarget.dataset.achievementId;
+		  const orderedIds = window.PF2eAchievements.AchievementStore.getDefinitions().map(item => item.id);
+		  const sourceIndex = orderedIds.indexOf(sourceId);
+		  const targetIndex = orderedIds.indexOf(targetId);
+		  if (sourceIndex < 0 || targetIndex < 0) return false;
+		  [orderedIds[sourceIndex], orderedIds[targetIndex]] = [orderedIds[targetIndex], orderedIds[sourceIndex]];
+		  await window.PF2eAchievements.AchievementStore.reorder(orderedIds);
 		  loadAchievementsEditMode();
 		  return false;
 		}
@@ -1358,47 +1333,18 @@
 			}
 		}
 
-		async function setAchievement(achievementname, playerID) {
-			if (!game.user.isGM) return;
-
-			console.log("SettingACH");
-
-			let player = game.users.get(playerID);
-			let AchievementData = window.PF2eAchievements.AchievementStore.getLegacyView();
-
-			// Find the specific achievement to modify
-			let achievementIndex = AchievementData.findIndex(x => x.name === achievementname);
-			if (achievementIndex === -1) return; // If achievement not found, exit
-
-			let achievement = Object.assign(new Achievement(), AchievementData[achievementIndex]);
-
-			// Add or remove the player from this specific achievement
-			if (achievement && Array.isArray(achievement.players)) {
-				if (achievement.players.includes(playerID)) {
-					achievement.removePlayer(playerID);
-				} else {
-					achievement.addPlayer(playerID);
-				}
-			} else {
-				achievement.addPlayer(playerID);
-				console.warn(`Achievement or players property is not properly defined for achievement: ${achievement ? achievement.name : 'undefined'}`);
-			}
-
-			// Update the achievement back into the AchievementData array
-			AchievementData[achievementIndex] = achievement;
-
-			// Save only the modified data back to game settings
-			await window.PF2eAchievements.AchievementStore.saveLegacyView(AchievementData);
-
+		async function setAchievement(achievementId, playerID) {
+			if (!game.user.isGM) return false;
+			const player = game.users.get(playerID);
+			if (!player) { ui.notifications.warn(`User "${playerID}" not found.`); return false; }
+			const current = window.PF2eAchievements.AchievementStore.getPlayerState(achievementId, playerID);
+			await window.PF2eAchievements.AchievementStore[current.unlocked ? "lock" : "unlock"](achievementId, playerID);
 			if (document.getElementById('AchPlayerNav').className == "AchPlayerNav") {
 				await game.settings.set('farchievements', 'loadSettingsForPlayer', playerID);
-				$('#achsyncnormalmode').append('<i id="SyncAch2" onclick="SendSyncMessage()" class="fas fa-sync achievementsettings" title="Click to push changes right now"></i>');
 				loadAchievements();
-			} else {
-				loadAchievementsEditMode();
-			}
+			} else loadAchievementsEditMode();
+			return true;
 		}
-
 		async function addAchievement() {
 			if(!game.user.isGM)return;
 				class Achievement{

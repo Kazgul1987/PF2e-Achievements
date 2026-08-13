@@ -129,10 +129,11 @@ export class AchievementStore {
   static async resetAll() {
     await this.saveDefinitions([]);
     await this.saveState({});
-    await game.settings.set(SETTINGS_NAMESPACE, "achievementSchemaVersion", 1);
+    await game.settings.set(SETTINGS_NAMESPACE, "achievementSchemaVersion", SCHEMA_VERSION);
   }
   static async _changePlayer(id, userId, changes) {
     return this._enqueue(async () => {
+      if (typeof id !== "string" || typeof userId !== "string" || !id || !userId) throw new TypeError("Achievement ID and user ID must be non-empty strings");
       if (!this.getDefinition(id)) throw new Error(`Unknown achievement ${id}`);
       const state = this.getState();
       state[id] ??= { players: {} }; state[id].players ??= {};
@@ -144,10 +145,35 @@ export class AchievementStore {
   static unlock(id, userId) {
     return this._changePlayer(id, userId, current => ({ unlocked: true, unlockedAt: current.unlocked ? current.unlockedAt ?? Date.now() : Date.now() }));
   }
-  static lock(id, userId) { return this._changePlayer(id, userId, { unlocked: false, seen: false, unlockedAt: null }); }
+  // Locking is deliberately lossless: progress, seen, and unknown extension
+  // fields survive; only the unlock and its timestamp are cleared.
+  static lock(id, userId) { return this._changePlayer(id, userId, { unlocked: false, unlockedAt: null }); }
   static setSeen(id, userId, seen = true) { return this._changePlayer(id, userId, { seen: Boolean(seen) }); }
-  static setProgress(id, userId, progress) { return this._changePlayer(id, userId, { progress: Number(progress) || 0 }); }
-  static incrementProgress(id, userId, amount = 1) { return this._changePlayer(id, userId, current => ({ progress: (Number(current.progress) || 0) + amount })); }
+  static setProgress(id, userId, progress) {
+    const definition = this.getDefinition(id);
+    if (!definition) return Promise.reject(new Error(`Unknown achievement ${id}`));
+    const maximum = Number(definition.progress?.required);
+    const requested = Math.max(0, Number(progress) || 0);
+    return this._changePlayer(id, userId, { progress: maximum > 0 ? Math.min(requested, maximum) : requested });
+  }
+  static incrementProgress(id, userId, amount = 1) {
+    const definition = this.getDefinition(id);
+    if (!definition) return Promise.reject(new Error(`Unknown achievement ${id}`));
+    const maximum = Number(definition.progress?.required);
+    return this._changePlayer(id, userId, current => {
+      const progress = Math.max(0, (Number(current.progress) || 0) + (Number(amount) || 0));
+      return { progress: maximum > 0 ? Math.min(progress, maximum) : progress };
+    });
+  }
+  static async reorder(orderedIds) {
+    const definitions = this.getDefinitions();
+    const byId = new Map(definitions.map(definition => [definition.id, definition]));
+    if (!Array.isArray(orderedIds) || orderedIds.length !== definitions.length ||
+        new Set(orderedIds).size !== definitions.length || orderedIds.some(id => !byId.has(id))) {
+      throw new Error("Achievement reorder must contain every achievement ID exactly once");
+    }
+    return this.saveDefinitions(orderedIds.map(id => byId.get(id)));
+  }
   static async unlockMany(id, userIds) {
     const uniqueIds = [...new Set(userIds)].filter(userId => typeof userId === "string" && userId.length);
     for (const userId of uniqueIds) await this.unlock(id, userId);
@@ -193,6 +219,11 @@ export class AchievementStore {
         players: Object.keys(players).filter(id => players[id].unlocked), seenBy: Object.keys(players).filter(id => players[id].seen), playerDates, playerProgress };
     });
   }
+  /**
+   * @deprecated Compatibility bridge for legacy UI code.
+   * New state mutations must use AchievementStore methods directly. New
+   * definition mutations should prefer create/update/delete/reorder APIs.
+   */
   static async saveLegacyView(achievements) {
     const oldState = this.getState(); const oldDefinitions = this.getDefinitions(); const definitions = []; const state = {};
     const idsBySignature = new Map();
